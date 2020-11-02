@@ -34,7 +34,7 @@ class Firm:
         revenues = sold * prices
         self.profits = revenues - costs
         prev_profit = self.get_from_history('profits', -1, 0)
-        if self.profits > prev_profit and pops['population'] > self.workers:
+        if self.profits > prev_profit and pops.population > self.workers:
             self.workers += 1
         elif self.profits < prev_profit and self.workers > 1:
             self.workers -= 1
