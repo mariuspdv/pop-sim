@@ -14,10 +14,7 @@ class Firm:
         return f'Employés: {self.workers}'
 
     def add_to_history(self):
-        self.history.append({'workers': self.workers,
-                             'wages': self.wages,
-                             'productivity': self.productivity,
-                             'profits': self.profits})
+        self.history.append({k: v for k, v in vars(self).items() if k != 'history'})
 
     def get_from_history(self, thing, index, default=None):
         if len(self.history) == 0:
