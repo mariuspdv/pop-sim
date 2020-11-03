@@ -1,25 +1,19 @@
-# Definition of firms
+# Definition of a Firm
+from historizor import Historizor
 
-class Firm:
+
+class Firm(Historizor):
 
     def __init__(self, workers, wages, productivity, profits=0):
+        super().__init__()
         self.workers = workers
         self.wages = wages
         self.productivity = productivity
         self.profits = profits
-        self.history = []
         self.add_to_history()
 
     def __str__(self):
         return f'Employés: {self.workers}'
-
-    def add_to_history(self):
-        self.history.append({k: v for k, v in vars(self).items() if k != 'history'})
-
-    def get_from_history(self, thing, index, default=None):
-        if len(self.history) == 0:
-            return default
-        return self.history[index][thing]
 
     def set_supply(self):
         '''offre totale'''
