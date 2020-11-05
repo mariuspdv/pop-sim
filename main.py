@@ -5,9 +5,12 @@ from pop import Pop
 PRICE_INC = 0.0001
 EPS = 0.001
 
+#1
+needs = [('food', 0, 0.4), ('lodging', 0, 0.2), ('clothes', 1, 0.3), ('luxury', 2, 0.5)]
+
 firm_1 = Firm(workers=15, wages=1, productivity=1)
-pop_1 = Pop(needs=0.8, population=20, income=1)
-prev_prices = 0.95
+pop_1 = Pop(needs=needs, population=20, income=1)
+prev_prices = {'food': 0.95, 'lodging': 0.96, 'clothes': 1.2, 'luxury': 3}
 
 
 def tick(t, firm, prices, pop):
