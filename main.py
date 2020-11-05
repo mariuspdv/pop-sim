@@ -5,6 +5,7 @@ from pop import Pop
 PRICE_INC = 0.0001
 EPS = 0.001
 
+#1
 needs = [('food', 0, 0.4), ('lodging', 0, 0.2), ('clothes', 1, 0.3), ('luxury', 2, 0.5)]
 
 firm_1 = Firm(workers=15, wages=1, productivity=1)
