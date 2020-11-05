@@ -8,33 +8,50 @@ EPS = 0.001
 #1
 needs = [('food', 0, 0.4), ('lodging', 0, 0.2), ('clothes', 1, 0.3), ('luxury', 2, 0.5)]
 
-firm_1 = Firm(workers=15, wages=1, productivity=1)
+firm_1 = Firm(product='food', workers=14, wages=1, productivity=1)
+firm_2 = Firm(product='lodging', workers=14, wages=1, productivity=1)
+firm_3 = Firm(product='clothes', workers=3, wages=1, productivity=1)
+firm_4 = Firm(product='luxury', workers=1, wages=1, productivity=1)
+firms = [firm_1, firm_2, firm_3, firm_4]
+
 pop_1 = Pop(needs=needs, population=20, income=1)
 prev_prices = {'food': 0.95, 'lodging': 0.96, 'clothes': 1.2, 'luxury': 3}
 
 
-def tick(t, firm, prices, pop):
-    supply = firm.set_supply()
+def tick(t, firms, prices, pop):
+    goods = prices.keys()
+    tot_supply = {good: 0 for good in goods}
+    for firm in firms:
+        firm.add_to_total_supply(tot_supply)
     tot_demand = pop.set_demand(prices)
 
-    while abs(tot_demand - supply) >= EPS:
-        if tot_demand > supply:
-            prices += PRICE_INC
-        else:
-            prices -= PRICE_INC
+# sum(abs(tot_demand[good] - tot_supply[good]) for good in goods) >= EPS
+    loop = True
+    while loop:
+        loop = False
+        for good in goods:
+            if abs(tot_demand[good] - tot_supply[good]) <= EPS:
+                continue
+            if tot_demand[good] > tot_supply[good] and prices[good] < 100:
+                prices[good] += PRICE_INC
+                loop = True
+            elif tot_demand[good] < tot_supply[good] and prices[good] > 0.1:
+                prices[good] -= PRICE_INC
+                loop = True
 #        print(prices)
         tot_demand = pop.set_demand(prices)
 
-    print(f"prix: {prices}, quantité: {tot_demand}")
+    print(f'Prices: {prices}')
 
-    firm.update_firm(tot_demand, prices, pop)
-    firm.add_to_history()
+    for firm in firms:
+        firm.update_firm(tot_demand, prices, pop)
+        firm.add_to_history()
     pop.add_to_history()
-    print(firm, pop)
+    print(firms, pop)
     return prices
 
 
-prev_prices = tick(0, firm_1, prev_prices, pop_1)
-prev_prices = tick(0, firm_1, prev_prices, pop_1)
-prev_prices = tick(0, firm_1, prev_prices, pop_1)
-prev_prices = tick(0, firm_1, prev_prices, pop_1)
+prev_prices = tick(0, firms, prev_prices, pop_1)
+prev_prices = tick(0, firms, prev_prices, pop_1)
+prev_prices = tick(0, firms, prev_prices, pop_1)
+prev_prices = tick(0, firms, prev_prices, pop_1)

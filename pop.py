@@ -21,7 +21,7 @@ class Pop(Historizor):
 
     def set_demand(self, prices):
         '''demande initiale calculée sans les salaires'''
-        demand = {}
+        demand = {good: 0 for good in prices.keys()}
         income = self.income
         for level in self._levels:
             value_level = sum(prices[good] * qty for good, l, qty in self.needs if l == level)

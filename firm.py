@@ -4,8 +4,9 @@ from historizor import Historizor
 
 class Firm(Historizor):
 
-    def __init__(self, workers, wages, productivity, profits=0):
+    def __init__(self, product, workers, wages, productivity, profits=0):
         super().__init__()
+        self.product = product
         self.workers = workers
         self.wages = wages
         self.productivity = productivity
@@ -19,13 +20,18 @@ class Firm(Historizor):
         '''offre totale'''
         return self.workers * self.productivity
 
+    def add_to_total_supply(self, tot_supply):
+        if self.product not in tot_supply:
+            tot_supply[self.product] = 0
+        tot_supply[self.product] += self.set_supply()
+
     def update_firm(self, sold, prices, pops):
         '''changer l'état de la firme'''
         costs = self.wages * self.workers
-        revenues = sold * prices
+        revenues = sold[self.product] * prices[self.product]
         self.profits = revenues - costs
         prev_profit = self.get_from_history('profits', -1, 0)
-        if self.profits > prev_profit and pops.population > self.workers:
+        if self.profits > prev_profit and self.profits > 0 and pops.population > self.workers:
             self.workers += 1
         elif self.profits < prev_profit and self.workers > 1:
             self.workers -= 1
