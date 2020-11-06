@@ -14,7 +14,8 @@ class Firm(Historizor):
         self.add_to_history()
 
     def __str__(self):
-        return f'Employés: {self.workers}'
+        return f'Employés: {self.workers}; ' \
+               f'Profits: {self.profits}'
 
     def set_supply(self):
         '''offre totale'''
@@ -33,7 +34,7 @@ class Firm(Historizor):
         prev_profit = self.get_from_history('profits', -1, 0)
         if self.profits > prev_profit and self.profits > 0 and pops.population > self.workers:
             self.workers += 1
-        elif self.profits < prev_profit and self.workers > 1:
+        elif (self.profits < prev_profit or self.profits < 0) and self.workers > 1:
             self.workers -= 1
 
 
