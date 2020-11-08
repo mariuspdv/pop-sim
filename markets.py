@@ -1,4 +1,4 @@
-class Demand:
+class Markets:
     def __init__(self, goods, demand=None):
         self.goods = set(goods)
         if demand is None:
@@ -20,9 +20,9 @@ class Demand:
     def __repr__(self):
         goods_str = ",".join(f"'{good}'" for good in self.goods)
         if self.is_empty():
-            return f'Demand({{{goods_str}}})'
+            return f'Markets({{{goods_str}}})'
         demand_str = ",".join(f"'{good}':'{qty}'" for good, qty in self.demand.items())
-        return f'Demand({{{goods_str}}}, {{{demand_str}}})'
+        return f'Markets({{{goods_str}}}, {{{demand_str}}})'
 
     # Representations
     def __str__(self):
@@ -82,14 +82,16 @@ class Demand:
 
     def __add__(self, other):
         # Operator +
-        if self.goods != other.goods:
+        # Less strict : other's goods should be included in self goods, not strictly equal
+        if not (self.goods >= other.goods):
             raise KeyError()
         tot_demand = {good: self.demand[good] + other[good] for good in self.goods}
-        return Demand(self.goods, tot_demand)
+        return Markets(self.goods, tot_demand)
 
     def __iadd__(self, other):
         # Operator += : in place change
-        if self.goods != other.goods:
+        # Less strict : other's goods should be included in self goods, not strictly equal
+        if not (self.goods >= other.goods):
             raise KeyError()
         self.demand = {good: self.demand[good] + other[good] for good in self.goods}
         return self
@@ -98,11 +100,11 @@ class Demand:
 if __name__ == '__main__':
 
     world_goods = {'food', "lodging"}
-    d = Demand(world_goods, {'food': 12, 'lodging': 5})
-    d1 = Demand(world_goods, {'food': 11, 'lodging': 4})
-    d4 = Demand(world_goods, {'food': 12, 'lodging': 4})
-    d2 = Demand(world_goods, {'food': 1, 'lodging': 8})
-    d3 = Demand(world_goods)
+    d = Markets(world_goods, {'food': 12, 'lodging': 5})
+    d1 = Markets(world_goods, {'food': 11, 'lodging': 4})
+    d4 = Markets(world_goods, {'food': 12, 'lodging': 4})
+    d2 = Markets(world_goods, {'food': 1, 'lodging': 8})
+    d3 = Markets(world_goods)
 
     print(d < d1)
     print(d1 < d)
