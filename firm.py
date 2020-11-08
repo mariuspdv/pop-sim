@@ -19,12 +19,7 @@ class Firm(Historizor):
 
     def set_supply(self):
         """computes the supply of one firm"""
-        return self.workers * self.productivity
-
-    def add_to_total_supply(self, tot_supply):
-        if self.product not in tot_supply:
-            tot_supply[self.product] = 0
-        tot_supply[self.product] += self.set_supply()
+        return {self.product: self.workers * self.productivity}
 
     def update_firm(self, sold, prices, world):
         """changes the firm's state using sales data"""

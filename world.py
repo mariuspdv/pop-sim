@@ -1,4 +1,5 @@
 # It says hello
+from markets import Markets
 
 class World:
     PRICE_INC = 0.0001
@@ -27,14 +28,23 @@ class World:
         self.tot_population = sum(pop.population for pop in self.pops)
 
     def clear_goods_market(self):
+        def aggregate_supply():
+            supply = Markets(self.goods)
+            for firm in self.firms:
+                supply += firm.set_supply()
+            return supply
+
+        def aggregate_demand(prices):
+            demand = Markets(self.goods)
+            for pop in self.pops:
+                demand += pop.set_demand(prices)
+            return demand
+
         max_prices = {good: price * 1.2 for good, price in self.prices.items()}
         min_prices = {good: price * 0.8 for good, price in self.prices.items()}
-        tot_supply = {good: 0 for good in self.goods}
-        tot_demand = {good: 0 for good in self.goods}
-        for firm in self.firms:
-            firm.add_to_total_supply(tot_supply)
-        for pop in self.pops:
-            pop.add_to_total_demand(tot_demand, pop.set_demand(self.prices))
+
+        tot_supply = aggregate_supply()
+        tot_demand = aggregate_demand(self.prices)
 
         # sum(abs(tot_demand[good] - tot_supply[good]) for good in goods) >= EPS
         loop = True
@@ -50,9 +60,7 @@ class World:
                     self.prices[good] -= self.PRICE_INC
                     loop = True
             #        print(prices)
-            tot_demand = {good: 0 for good in self.goods}
-            for pop in self.pops:
-                pop.add_to_total_demand(tot_demand, pop.set_demand(self.prices))
+            tot_demand = aggregate_demand(self.prices)
 
         self.tot_demand = tot_demand
         self.tot_supply = tot_supply

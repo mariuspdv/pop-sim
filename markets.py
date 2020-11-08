@@ -5,7 +5,7 @@ class Markets:
             self.demand = {good: 0 for good in self.goods}
         else:
             self.demand = demand
-            if goods != set(self.demand.keys()):
+            if not(goods >= set(self.demand.keys())):
                 # We chose a strict policy here: goods should be declared in the list of goods in the world
                 raise KeyError()
             if any(qty < 0 for qty in self.demand.values()):
@@ -82,19 +82,43 @@ class Markets:
 
     def __add__(self, other):
         # Operator +
-        # Less strict : other's goods should be included in self goods, not strictly equal
-        if not (self.goods >= other.goods):
-            raise KeyError()
-        tot_demand = {good: self.demand[good] + other[good] for good in self.goods}
-        return Markets(self.goods, tot_demand)
+        if type(other) is Markets:
+            # Less strict : other's goods should be included in self goods, not strictly equal
+            if not (self.goods >= set(other.demand)):
+                raise KeyError()
+            tot_demand = self.demand.copy()
+            tot_demand.update(
+                {good: self.demand[good] + other.demand[good] for good in self.goods if good in other.demand}
+            )
+            return Markets(self.goods, tot_demand)
+        if type(other) is dict:
+            if not (self.goods >= set(other)):
+                raise KeyError()
+            tot_demand = self.demand.copy()
+            tot_demand.update(
+                {good: self.demand[good] + other[good] for good in self.goods if good in other}
+            )
+            return Markets(self.goods, tot_demand)
+        raise TypeError()
 
     def __iadd__(self, other):
         # Operator += : in place change
-        # Less strict : other's goods should be included in self goods, not strictly equal
-        if not (self.goods >= other.goods):
-            raise KeyError()
-        self.demand = {good: self.demand[good] + other[good] for good in self.goods}
-        return self
+        if type(other) is Markets:
+            # Less strict : other's goods should be included in self goods, not strictly equal
+            if not (self.goods >= set(other.demand)):
+                raise KeyError()
+            self.demand.update(
+                {good: self.demand[good] + other.demand[good] for good in self.goods if good in other.demand}
+            )
+            return self
+        if type(other) is dict:
+            if not (self.goods >= set(other)):
+                raise KeyError()
+            self.demand.update(
+                {good: self.demand[good] + other[good] for good in self.goods if good in other}
+            )
+            return self
+        raise TypeError()
 
 
 if __name__ == '__main__':
@@ -114,10 +138,22 @@ if __name__ == '__main__':
 
     print(repr(d))
     print(repr(d3))
+    print("d", d)
+    print("d2", d2)
+    print("d+d2")
     print(repr(d + d2))
+    print('d += d2')
     d += d2
     print(repr(d))
 
+    print('d += d2')
     d += d2
+    print(repr(d))
+
+    print('d += {food:100}}')
+    d += {'food': 100}
+    print(repr(d))
+    print('d + {food:100}}')
+    print(repr(d + {'food': 100}))
     print(repr(d))
 
