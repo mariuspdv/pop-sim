@@ -33,9 +33,3 @@ class Pop(Historizor):
             break
         return {good: qty * self.population for good, qty in demand.items()}
 
-    def add_to_total_demand(self, tot_demand, pop_demand):
-        for good in pop_demand:
-            if good not in tot_demand:
-                tot_demand[good] = pop_demand[good]
-            else:
-                tot_demand[good] += pop_demand[good]
