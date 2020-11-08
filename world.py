@@ -10,10 +10,14 @@ class World:
 
     def __init__(self, goods, firms, pops, prices):
         # Core properties
-        self.goods = goods
+        self.goods = set(goods)
         self.firms = firms
         self.pops = pops
         self.prices = prices
+
+        # Check consistency between prices and goods
+        if not (set(prices) <= goods):
+            raise KeyError()
 
         # Computed aggregates
         self.tot_demand = {}
@@ -55,9 +59,9 @@ class World:
         # Compute the aggregated supply of goods over all the firms
         tot_supply = aggregate_supply()
 
-        #
-        # Adjust iteratively goods' prices to equilibrate goods demand and supply
-        # within acceptable price movement
+        # Main loop logic
+        #   Adjust iteratively goods' prices to equilibrate goods demand and supply
+        #   within acceptable price movement
 
         # Compute the aggregated demand over all the pops, given a set of prices
         tot_demand = aggregate_demand(self.prices)
@@ -75,11 +79,11 @@ class World:
                     # supply == demand : no need to change price change
                     continue
                 if tot_demand[good] > tot_supply[good] and self.prices[good] < max_prices[good]:
-                    # Adjust price if we are still in the acceptable rang
+                    # Adjust price if we are still in the acceptable range
                     self.prices[good] += self.PRICE_INC
                     loop = True
                 elif tot_demand[good] < tot_supply[good] and self.prices[good] > min_prices[good]:
-                    # Adjust price if we are still in the acceptable rang
+                    # Adjust price if we are still in the acceptable range
                     self.prices[good] -= self.PRICE_INC
                     loop = True
             # Compute the aggregated demand over all the pops, given the new set of prices
