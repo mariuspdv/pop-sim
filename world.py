@@ -1,5 +1,5 @@
 # It says hello
-from markets import Markets
+from goodsvector import GoodsVector
 
 
 class World:
@@ -41,13 +41,13 @@ class World:
         """Adjust aggregated demand, supply and prices on good markets"""
 
         def aggregate_supply():
-            supply = Markets(self.goods)
+            supply = GoodsVector(self.goods)
             for firm in self.firms:
                 supply += firm.set_supply()
             return supply
 
         def aggregate_demand(prices):
-            demand = Markets(self.goods)
+            demand = GoodsVector(self.goods)
             for pop in self.pops:
                 demand += pop.set_demand(prices)
             return demand

@@ -1,4 +1,4 @@
-class Markets:
+class GoodsVector:
     def __init__(self, goods, demand=None):
         self.goods = set(goods)
         if demand is None:
@@ -20,9 +20,9 @@ class Markets:
     def __repr__(self):
         goods_str = ",".join(f"'{good}'" for good in self.goods)
         if self.is_empty():
-            return f'Markets({{{goods_str}}})'
+            return f'GoodsVector({{{goods_str}}})'
         demand_str = ",".join(f"'{good}':'{qty}'" for good, qty in self.demand.items())
-        return f'Markets({{{goods_str}}}, {{{demand_str}}})'
+        return f'GoodsVector({{{goods_str}}}, {{{demand_str}}})'
 
     # Representations
     def __str__(self):
@@ -82,7 +82,7 @@ class Markets:
 
     def __add__(self, other):
         # Operator +
-        if type(other) is Markets:
+        if type(other) is GoodsVector:
             # Less strict : other's goods should be included in self goods, not strictly equal
             if not (self.goods >= set(other.demand)):
                 raise KeyError()
@@ -90,7 +90,7 @@ class Markets:
             tot_demand.update(
                 {good: self.demand[good] + other.demand[good] for good in self.goods if good in other.demand}
             )
-            return Markets(self.goods, tot_demand)
+            return GoodsVector(self.goods, tot_demand)
         if type(other) is dict:
             if not (self.goods >= set(other)):
                 raise KeyError()
@@ -98,12 +98,12 @@ class Markets:
             tot_demand.update(
                 {good: self.demand[good] + other[good] for good in self.goods if good in other}
             )
-            return Markets(self.goods, tot_demand)
+            return GoodsVector(self.goods, tot_demand)
         raise TypeError()
 
     def __iadd__(self, other):
         # Operator += : in place change
-        if type(other) is Markets:
+        if type(other) is GoodsVector:
             # Less strict : other's goods should be included in self goods, not strictly equal
             if not (self.goods >= set(other.demand)):
                 raise KeyError()
@@ -124,11 +124,11 @@ class Markets:
 if __name__ == '__main__':
 
     world_goods = {'food', "lodging"}
-    d = Markets(world_goods, {'food': 12, 'lodging': 5})
-    d1 = Markets(world_goods, {'food': 11, 'lodging': 4})
-    d4 = Markets(world_goods, {'food': 12, 'lodging': 4})
-    d2 = Markets(world_goods, {'food': 1, 'lodging': 8})
-    d3 = Markets(world_goods)
+    d = GoodsVector(world_goods, {'food': 12, 'lodging': 5})
+    d1 = GoodsVector(world_goods, {'food': 11, 'lodging': 4})
+    d4 = GoodsVector(world_goods, {'food': 12, 'lodging': 4})
+    d2 = GoodsVector(world_goods, {'food': 1, 'lodging': 8})
+    d3 = GoodsVector(world_goods)
 
     print(d < d1)
     print(d1 < d)
