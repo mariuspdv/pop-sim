@@ -32,13 +32,17 @@ class World:
             firm.add_to_history()
         for pop in self.pops:
             pop.add_to_history()
-        self.history.append({'tot_demand': self.tot_demand, 'tot_supply': self.tot_supply})
+        self.history.append({'tot_demand': self.tot_demand, 'tot_supply': self.tot_supply,
+                             'prices': self.prices})
 
     def compute_tot_population(self):
         self.tot_population = sum(pop.population for pop in self.pops)
 
     def clear_goods_market(self):
-        """Adjust aggregated demand, supply and prices on good markets"""
+        """Sets supply, demand, and finds equilibria
+           on goods markets through an iterative process,
+           with price floors and ceilings to limit
+           changes."""
 
         def aggregate_supply():
             supply = GoodsVector(self.goods)
@@ -52,41 +56,36 @@ class World:
                 demand += pop.set_demand(prices)
             return demand
 
-        # Limit price changes in one tick to a band between PRICE_CHANGE_FLOOR and CEILING
+        # Limit price changes in one tick to a range between PRICE_CHANGE_FLOOR and CEILING
         max_prices = {good: price * self.PRICE_CHANGE_CEILING for good, price in self.prices.items()}
         min_prices = {good: price * self.PRICE_CHANGE_FLOOR for good, price in self.prices.items()}
 
         # Compute the aggregated supply of goods over all the firms
         tot_supply = aggregate_supply()
 
-        # Main loop logic
-        #   Adjust iteratively goods' prices to equilibrate goods demand and supply
-        #   within acceptable price movement
-
         # Compute the aggregated demand over all the pops, given a set of prices
         tot_demand = aggregate_demand(self.prices)
+
+        # Main loop logic :
+        #   Adjust iteratively goods' prices then adjust demand accordingly until all
+        #   goods' demands and supplies are equal or until prices are at their limits
+
         loop = True
         while loop:
-            # The loop will end when all goods market are at equilibrium (supply == demand)
-            # or if the prices have stopped changing from iteration to another (which happens
-            # when they have reached their floor or ceiling for the tick
             loop = False
-            # Each market good is considered. We stop when all price adjustments have reached their finish condition
             for good in self.goods:
-                # Because prices chang by a discrete increment, mathematical equality spply==demand can not be reached
+                # Because prices chang by a discrete increment, mathematical equality cannot be reached
                 # We tolerate a difference of a small number EPS
                 if abs(tot_demand[good] - tot_supply[good]) <= self.EPS:
-                    # supply == demand : no need to change price change
                     continue
                 if tot_demand[good] > tot_supply[good] and self.prices[good] < max_prices[good]:
-                    # Adjust price if we are still in the acceptable range
                     self.prices[good] += self.PRICE_INC
                     loop = True
                 elif tot_demand[good] < tot_supply[good] and self.prices[good] > min_prices[good]:
-                    # Adjust price if we are still in the acceptable range
                     self.prices[good] -= self.PRICE_INC
                     loop = True
-            # Compute the aggregated demand over all the pops, given the new set of prices
+
+            # Adjust the new demand given the new set of prices, over all the pops
             tot_demand = aggregate_demand(self.prices)
 
         self.tot_demand = tot_demand
@@ -101,7 +100,7 @@ class World:
         # Compute useful aggregate(s)
         self.compute_tot_population()
 
-        # Core mechanism
+        # Core mechanisms
         self.clear_goods_market()
         self.clear_labor_market()
 

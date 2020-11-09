@@ -32,4 +32,3 @@ class Pop(Historizor):
             demand.update({good: qty * discount for good, l, qty in self.needs if l == level})
             break
         return {good: qty * self.population for good, qty in demand.items()}
-
