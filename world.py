@@ -39,10 +39,9 @@ class World:
         self.tot_population = sum(pop.population for pop in self.pops)
 
     def clear_goods_market(self):
-        """Sets supply, demand, and finds equilibria
+        """Sets aggregate supply, demand, and finds equilibria
            on goods markets through an iterative process,
-           with price floors and ceilings to limit
-           changes."""
+           with price floors and ceilings to limit changes."""
 
         def aggregate_supply():
             supply = GoodsVector(self.goods)
@@ -62,9 +61,6 @@ class World:
 
         # Compute the aggregated supply of goods over all the firms
         tot_supply = aggregate_supply()
-
-        # HERE THE LABOR MARKET SHOULD COME IN, because firms need the people to produce, and workers
-        # need the wages to set demand
 
         # Compute the aggregated demand over all the pops, given a set of prices
         tot_demand = aggregate_demand(self.prices)
@@ -118,9 +114,16 @@ class World:
         for firm in self.firms:
             l = []
             w = []
+            s = []
+            t = []
             for i in range(0, len(self.history)):
                 l.append(round(firm.get_from_history("profits", i), 2))
                 w.append(round(firm.get_from_history("workers", i), 2))
-            print(f'Profits of {firm.product}: {l};')
-            print(f'total profits: {round(sum(l), 2)}')
+                s.append(round(firm.get_from_history("supply", i), 2))
+                t.append((firm.get_from_history("workers", i), firm.get_from_history("supply", i),
+                          round(firm.get_from_history("profits", i), 2)))
+            print(f'Profits of {firm.product}: {l}; total profits: {round(sum(l), 2)}')
+            print(f'Supply of {firm.product}: {s};')
             print(f'Workers of {firm.product}: {w}; max: {max(w)}; min: {min(w)}')
+            print(f'{t}')
+            print(f'')
