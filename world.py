@@ -46,14 +46,18 @@ class World:
         def aggregate_supply():
             supply = GoodsVector(self.goods)
             for firm in self.firms:
-                supply[firm.product] += firm.supply
+                supply += {firm.product: firm.supply}
             return supply
 
         def aggregate_demand(prices):
             demand = GoodsVector(self.goods)
             for pop in self.pops:
-                demand += pop.set_demand(prices)
+                demand += pop.compute_demand(prices)
             return demand
+
+        def set_demand(prices):
+            for pop in self.pops:
+                pop.set_demand(prices)
 
         # Limit price changes in one tick to a range between PRICE_CHANGE_FLOOR and CEILING
         max_prices = {good: price * self.PRICE_CHANGE_CEILING for good, price in self.prices.items()}
@@ -87,6 +91,7 @@ class World:
             # Adjust the new demand given the new set of prices, over all the pops
             tot_demand = aggregate_demand(self.prices)
 
+        set_demand(self.prices)
         self.tot_demand = tot_demand
         self.tot_supply = tot_supply
 
@@ -95,17 +100,23 @@ class World:
         for firm in self.firms:
             firm.set_labor_demand()
 
+    def set_goods_supply(self):
+        for firm in self.firms:
+            firm.set_supply()
+
+    def update_firms_profits(self):
+        for firm in self.firms:
+            firm.update_profits(self.tot_demand, self.prices)
+
     def tick(self, t: int):
         # Compute useful aggregate(s)
         self.compute_tot_population()
 
         # Core mechanisms
-        for firm in self.firms:
-            firm.set_supply()
+        self.set_goods_supply()
         self.clear_labor_market()
         self.clear_goods_market()
-        for firm in self.firms:
-            firm.update_profits(self.tot_demand, self.prices)
+        self.update_firms_profits()
 
         # Technical logistics
         self.add_to_history()
