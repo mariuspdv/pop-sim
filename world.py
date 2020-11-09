@@ -47,7 +47,7 @@ class World:
         def aggregate_supply():
             supply = GoodsVector(self.goods)
             for firm in self.firms:
-                supply += firm.set_supply()
+                supply[firm.product] += firm.supply
             return supply
 
         def aggregate_demand(prices):
@@ -62,6 +62,9 @@ class World:
 
         # Compute the aggregated supply of goods over all the firms
         tot_supply = aggregate_supply()
+
+        # HERE THE LABOR MARKET SHOULD COME IN, because firms need the people to produce, and workers
+        # need the wages to set demand
 
         # Compute the aggregated demand over all the pops, given a set of prices
         tot_demand = aggregate_demand(self.prices)
@@ -94,15 +97,19 @@ class World:
     def clear_labor_market(self):
         """Adjust aggregated demand, supply and prices on labor market"""
         for firm in self.firms:
-            firm.update_firm(self.tot_demand, self.prices, self)
+            firm.set_labor_demand()
 
     def tick(self, t: int):
         # Compute useful aggregate(s)
         self.compute_tot_population()
 
         # Core mechanisms
-        self.clear_goods_market()
+        for firm in self.firms:
+            firm.set_supply()
         self.clear_labor_market()
+        self.clear_goods_market()
+        for firm in self.firms:
+            firm.update_profits(self.tot_demand, self.prices)
 
         # Technical logistics
         self.add_to_history()
