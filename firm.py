@@ -23,9 +23,7 @@ class Firm(Historizor):
     def set_supply(self):
         """Updates the supply of one firm, given previous profits"""
         prev_profit = self.get_from_history('profits', -2, 0) if len(self.history) > 1 else 0
-        if prev_profit is None:
-            pass
-        elif self.profits > prev_profit and self.profits > 0:
+        if self.profits > prev_profit and self.profits > 0:
             self.supply += 0.25
         elif self.profits < prev_profit or self.profits < 0:
             self.supply -= 0.25

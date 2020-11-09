@@ -73,7 +73,7 @@ class World:
         while loop:
             loop = False
             for good in self.goods:
-                # Because prices chang by a discrete increment, mathematical equality cannot be reached
+                # Because prices change by a discrete increment, mathematical equality cannot be reached
                 # We tolerate a difference of a small number EPS
                 if abs(tot_demand[good] - tot_supply[good]) <= self.EPS:
                     continue
@@ -112,18 +112,21 @@ class World:
 
     def summary(self):
         for firm in self.firms:
-            l = []
+            p = []
             w = []
             s = []
             t = []
             for i in range(0, len(self.history)):
-                l.append(round(firm.get_from_history("profits", i), 2))
+                p.append(round(firm.get_from_history("profits", i), 2))
                 w.append(round(firm.get_from_history("workers", i), 2))
                 s.append(round(firm.get_from_history("supply", i), 2))
                 t.append((firm.get_from_history("workers", i), firm.get_from_history("supply", i),
                           round(firm.get_from_history("profits", i), 2)))
-            print(f'Profits of {firm.product}: {l}; total profits: {round(sum(l), 2)}')
+            print(f'Profits of {firm.product}: {p}; total profits: {round(sum(p), 2)}')
             print(f'Supply of {firm.product}: {s};')
             print(f'Workers of {firm.product}: {w}; max: {max(w)}; min: {min(w)}')
             print(f'{t}')
             print(f'')
+
+        for pop in self.pops:
+            print(pop.history)
