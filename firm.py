@@ -2,19 +2,20 @@
 from historizor import Historizor
 import random
 
+
 class Firm(Historizor):
 
     THROUGHPUT_FLOOR = 0.9
 
-    def __init__(self, product, workers, wages, productivity, profits=0):
+    def __init__(self, id_firm, product, workers, wages, productivity, profits=0):
         super().__init__()
+        self.id_firm = id_firm
         self.product = product
         self.workers = workers
         self.wages = wages
         self.productivity = productivity
         self.supply = workers * productivity
         self.profits = profits
-        self.add_to_history()
 
     def __str__(self):
         return f'Employees: {self.workers}'
@@ -44,9 +45,9 @@ class Firm(Historizor):
             self.workers -= 1
 
             # Fire a random worker from a POP
-            workers = {pop: pop.employed[self] for pop in pops}
+            workers = {id_pop: pop.employed_by(self.id_firm) for id_pop, pop in pops.items()}
             [fired] = random.choices(list(workers.keys()), weights=workers.values(), k=1)
-            fired.employed[self] -= 1
+            pops[fired].fired_by(self.id_firm, 1)
 
             lab_demand = 0
 

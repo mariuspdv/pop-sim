@@ -12,8 +12,8 @@ class World:
     def __init__(self, goods, firms, pops, prices):
         # Core properties
         self.goods = set(goods)
-        self.firms = firms
-        self.pops = pops
+        self.firms = {firm.id_firm: firm for firm in firms}
+        self.pops = {pop.id_pop: pop for pop in pops}
         self.prices = prices
 
         # Check consistency between prices and goods
@@ -29,15 +29,15 @@ class World:
         self.history = []
 
     def add_to_history(self):
-        for firm in self.firms:
+        for firm in self.firms.values():
             firm.add_to_history()
-        for pop in self.pops:
+        for pop in self.pops.values():
             pop.add_to_history()
         self.history.append({'tot_demand': self.tot_demand, 'tot_supply': self.tot_supply,
                              'prices': self.prices})
 
     def compute_tot_population(self):
-        self.tot_population = sum(pop.population for pop in self.pops)
+        self.tot_population = sum(pop.population for pop in self.pops.values())
 
     def clear_goods_market(self):
         """Sets aggregate supply, demand, and finds equilibria
@@ -46,18 +46,18 @@ class World:
 
         def aggregate_supply():
             supply = GoodsVector(self.goods)
-            for firm in self.firms:
+            for firm in self.firms.values():
                 supply += {firm.product: firm.supply}
             return supply
 
         def aggregate_demand(prices):
             demand = GoodsVector(self.goods)
-            for pop in self.pops:
+            for pop in self.pops.values():
                 demand += pop.compute_demand(prices)
             return demand
 
         def set_demand(prices):
-            for pop in self.pops:
+            for pop in self.pops.values():
                 pop.set_demand(prices)
 
         # Limit price changes in one tick to a range between PRICE_CHANGE_FLOOR and CEILING
@@ -101,24 +101,24 @@ class World:
 
         def set_labor_demand():
             """Returns a dictionary with the demand for each firms"""
-            tot_lab_demand = {firm: 0 for firm in self.firms}
-            for firm in self.firms:
-                tot_lab_demand[firm] += firm.set_labor_demand(self.pops)
+            tot_lab_demand = {id_firm: 0 for id_firm in self.firms}
+            for id_firm, firm in self.firms.items():
+                tot_lab_demand[id_firm] += firm.set_labor_demand(self.pops)
             return tot_lab_demand
 
         def set_labor_supply():
             """Ideally returns a dictionary/class with the number of unemployed
                people of each type in a region. Atm, one unified type."""
-            lab_supply = {pop: 0 for pop in self.pops}
-            for pop in self.pops:
-                lab_supply[pop] += pop.population - sum(v for _, v in pop.employed.items())
+            lab_supply = {id_pop: 0 for id_pop in self.pops}
+            for id_pop, pop in self.pops.items():
+                lab_supply[id_pop] += pop.unemployed()
             return lab_supply
 
         agg_lab_demand = set_labor_demand()
         agg_lab_supply = set_labor_supply()
 
         # For each new job, hire someone random who fulfills the criteria and write it down in pop.employed
-        for job, offer in agg_lab_demand.items():
+        for id_firm, offer in agg_lab_demand.items():
             while offer > 0:
                 [hired] = random.choices(list(agg_lab_supply.keys()), weights=agg_lab_supply.values(), k=1)
                 if agg_lab_supply[hired] <= 0:
@@ -126,15 +126,15 @@ class World:
                 else:
                     offer -= 1
                     agg_lab_supply[hired] -= 1
-                    hired.employed[job] += 1
-                    job.workers += 1
+                    self.pops[hired].hired_by(id_firm, 1)
+                    self.firms[id_firm].workers += 1
 
     def set_goods_supply(self):
-        for firm in self.firms:
+        for firm in self.firms.values():
             firm.set_supply()
 
     def update_firms_profits(self):
-        for firm in self.firms:
+        for firm in self.firms.values():
             firm.update_profits(self.tot_demand, self.prices)
 
     def tick(self, t: int):
@@ -151,7 +151,7 @@ class World:
         self.add_to_history()
 
     def summary(self):
-        for firm in self.firms:
+        for firm in self.firms.values():
             p = []
             w = []
             s = []
@@ -168,5 +168,5 @@ class World:
             print(f'{t}')
             print(f'')
 
-        for pop in self.pops:
+        for pop in self.pops.values():
             print(pop.employed)
