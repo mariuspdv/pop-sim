@@ -1,5 +1,6 @@
 # It says hello
 from goodsvector import GoodsVector
+import random
 
 
 class World:
@@ -96,9 +97,37 @@ class World:
         self.tot_supply = tot_supply
 
     def clear_labor_market(self):
-        """Adjust aggregated demand, supply and prices on labor market"""
-        for firm in self.firms:
-            firm.set_labor_demand()
+        """Adjust aggregated demand, supply and wages on labor market"""
+
+        def set_labor_demand():
+            """Returns a dictionary with the demand for each firms"""
+            tot_lab_demand = {firm: 0 for firm in self.firms}
+            for firm in self.firms:
+                tot_lab_demand[firm] += firm.set_labor_demand(self.pops)
+            return tot_lab_demand
+
+        def set_labor_supply():
+            """Ideally returns a dictionary/class with the number of unemployed
+               people of each type in a region. Atm, one unified type."""
+            lab_supply = {pop: 0 for pop in self.pops}
+            for pop in self.pops:
+                lab_supply[pop] += pop.population - sum(v for _, v in pop.employed.items())
+            return lab_supply
+
+        agg_lab_demand = set_labor_demand()
+        agg_lab_supply = set_labor_supply()
+
+        # For each new job, hire someone random who fulfills the criteria and write it down in pop.employed
+        for job, offer in agg_lab_demand.items():
+            while offer > 0:
+                [hired] = random.choices(list(agg_lab_supply.keys()), weights=agg_lab_supply.values(), k=1)
+                if agg_lab_supply[hired] <= 0:
+                    continue
+                else:
+                    offer -= 1
+                    agg_lab_supply[hired] -= 1
+                    hired.employed[job] += 1
+                    job.workers += 1
 
     def set_goods_supply(self):
         for firm in self.firms:
@@ -140,4 +169,4 @@ class World:
             print(f'')
 
         for pop in self.pops:
-            print(pop.history)
+            print(pop.employed)

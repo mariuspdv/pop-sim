@@ -1,6 +1,6 @@
 # Definition of a Firm
 from historizor import Historizor
-
+import random
 
 class Firm(Historizor):
 
@@ -17,8 +17,7 @@ class Firm(Historizor):
         self.add_to_history()
 
     def __str__(self):
-        return f'Employees: {self.workers}; ' \
-               f'Profits: {self.profits}'
+        return f'Employees: {self.workers}'
 
     def set_supply(self):
         """Updates the supply of one firm, given previous profits"""
@@ -29,16 +28,29 @@ class Firm(Historizor):
             self.supply -= 0.25
         return {self.product: self.supply}
 
-    def set_labor_demand(self):
+    def set_labor_demand(self, pops):
         max_supply = self.workers * self.productivity
+        lab_demand = 0
         if self.supply > max_supply:
-            self.workers += 1
+            lab_demand = 1
         # Firm fires if under 90% production capacity, as long as firing still leaves desired output possible
         # and at least 1 worker (no dying firm yet).
         elif self.THROUGHPUT_FLOOR * max_supply >= self.supply and self.workers > 1:
+            lab_demand = -1
+            if self.supply > (self.workers - 1) * self.productivity:
+                lab_demand = 0
+
+        if lab_demand == -1:
             self.workers -= 1
-            if self.supply > self.workers * self.productivity:
-                self.workers += 1
+
+            # Fire a random worker from a POP
+            workers = {pop: pop.employed[self] for pop in pops}
+            [fired] = random.choices(list(workers.keys()), weights=workers.values(), k=1)
+            fired.employed[self] -= 1
+
+            lab_demand = 0
+
+        return lab_demand
 
     def update_profits(self, sold, prices):
         """changes the firm's state using sales data"""

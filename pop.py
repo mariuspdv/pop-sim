@@ -6,7 +6,7 @@ from goodsvector import GoodsVector
 
 class Pop(Historizor):
 
-    def __init__(self, goods, needs, population, income):
+    def __init__(self, goods, needs, population, income, employed):
         super().__init__()
         self.goods = goods
         self.needs = needs
@@ -14,6 +14,7 @@ class Pop(Historizor):
         self.population = population
         self.income = income
         self.demand = GoodsVector(self.goods)
+        self.employed = employed
         self.add_to_history()
 
     def __str__(self):

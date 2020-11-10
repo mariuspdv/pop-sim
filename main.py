@@ -3,16 +3,19 @@ from pop import Pop
 from world import World
 
 goods = {'food', 'lodging', 'clothes', 'luxury'}
-needs_1 = [('food', 0, 0.4), ('lodging', 0, 0.2), ('clothes', 1, 0.3), ('luxury', 2, 0.5)]
-needs_2 = [('food', 0, 0.4), ('lodging', 0, 0.3), ('clothes', 1, 0.4), ('luxury', 2, 1)]
-needs_3 = [('food', 0, 0.4), ('lodging', 0, 0.4), ('clothes', 0, 0.6), ('luxury', 1, 5)]
-pop_1 = Pop(goods=goods, needs=needs_1, population=20, income=1)
-pop_2 = Pop(goods=goods, needs=needs_2, population=6, income=2)
-pop_3 = Pop(goods=goods, needs=needs_3, population=1, income=6)
 firm_1 = Firm(product='food', workers=9, wages=1, productivity=1)
 firm_2 = Firm(product='lodging', workers=7, wages=1, productivity=1)
 firm_3 = Firm(product='clothes', workers=4, wages=1, productivity=1)
 firm_4 = Firm(product='luxury', workers=3, wages=1, productivity=1)
+needs_1 = [('food', 0, 0.4), ('lodging', 0, 0.2), ('clothes', 1, 0.3), ('luxury', 2, 0.5)]
+needs_2 = [('food', 0, 0.4), ('lodging', 0, 0.3), ('clothes', 1, 0.4), ('luxury', 2, 1)]
+needs_3 = [('food', 0, 0.4), ('lodging', 0, 0.4), ('clothes', 0, 0.6), ('luxury', 1, 5)]
+employ_1 = {firm_1: 9, firm_2: 4, firm_3: 1, firm_4: 2}
+employ_2 = {firm_1: 0, firm_2: 3, firm_3: 3, firm_4: 0}
+employ_3 = {firm_1: 0, firm_2: 0, firm_3: 0, firm_4: 1}
+pop_1 = Pop(goods=goods, needs=needs_1, population=20, income=1, employed=employ_1)
+pop_2 = Pop(goods=goods, needs=needs_2, population=6, income=2, employed=employ_2)
+pop_3 = Pop(goods=goods, needs=needs_3, population=1, income=6, employed=employ_3)
 
 world = World(goods=goods,
               firms=[firm_1, firm_2, firm_3, firm_4],
