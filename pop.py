@@ -6,14 +6,14 @@ from goodsvector import GoodsVector
 
 class Pop(Historizor):
 
-    def __init__(self, id_pop, goods, needs, population, income, employed):
+    def __init__(self, id_pop, goods, needs, population, employed):
         super().__init__()
         self.id_pop = id_pop
         self.goods = goods
         self.needs = needs
         self._levels = sorted(list(set(l for _, l, _ in needs)))
         self.population = population
-        self.income = income
+        self.income = 0
         self.demand = GoodsVector(self.goods)
         self.employed = employed
 
@@ -31,6 +31,11 @@ class Pop(Historizor):
 
     def hired_by(self, id_firm, employees):
         self.employed[id_firm] += employees
+
+    def compute_income(self, firms):
+        income_from_work = sum([self.employed[firm.id_firm] * firm.wages for firm in firms.values()])
+        income_from_other = 0
+        self.income = income_from_work + income_from_other
 
     def compute_demand(self, prices):
         """finds maximal demand within the bounds of income"""

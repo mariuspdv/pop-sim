@@ -61,6 +61,10 @@ class World:
             for pop in self.pops.values():
                 pop.set_demand(prices)
 
+        def compute_incomes():
+            for pop in self.pops.values():
+                pop.compute_income(self.firms)
+
         # Limit price changes in one tick to a range between PRICE_CHANGE_FLOOR and CEILING
         max_prices = {good: price * self.PRICE_CHANGE_CEILING for good, price in self.prices.items()}
         min_prices = {good: price * self.PRICE_CHANGE_FLOOR for good, price in self.prices.items()}
@@ -68,7 +72,8 @@ class World:
         # Compute the aggregated supply of goods over all the firms
         tot_supply = aggregate_supply()
 
-        # Compute the aggregated demand over all the pops, given a set of prices
+        # Compute the aggregated demand over all the pops, given a set of prices and incomes
+        compute_incomes()
         tot_demand = aggregate_demand(self.prices)
 
         # Main loop logic :
@@ -136,7 +141,6 @@ class World:
                                      if firm.wages < self.firms[id_firm].wages}
                     if low_wage_firm == {}:
                         self.firms[id_firm].raise_wages(self.WAGE_RISE)
-                        continue
                     else:
                         [poached] = random.choices(list(low_wage_firm.keys()), weights=low_wage_firm.values(), k=1)
 
@@ -199,3 +203,4 @@ class World:
 
         for pop in self.pops.values():
             print(pop.employed)
+            print(pop.income)
