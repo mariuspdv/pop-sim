@@ -142,16 +142,16 @@ class World:
                     if low_wage_firm == {}:
                         self.firms[id_firm].raise_wages(self.WAGE_RISE)
                     else:
-                        [poached] = random.choices(list(low_wage_firm.keys()), weights=low_wage_firm.values(), k=1)
+                        [poached_firm] = random.choices(list(low_wage_firm.keys()), weights=low_wage_firm.values(), k=1)
 
                         # Update the hiring and firing firms' data and randomly pick a pop in the poached firm
                         self.firms[id_firm].workers += 1
-                        self.firms[poached].workers -= 1
+                        self.firms[poached_firm].workers -= 1
 
-                        workers = {id_pop: pop.employed_by(poached) for id_pop, pop in self.pops.items()}
-                        [fired] = random.choices(list(workers.keys()), weights=workers.values(), k=1)
-                        self.pops[fired].fired_by(poached, 1)
-                        self.pops[fired].hired_by(id_firm, 1)
+                        workers = {id_pop: pop.employed_by(poached_firm) for id_pop, pop in self.pops.items()}
+                        [poached] = random.choices(list(workers.keys()), weights=workers.values(), k=1)
+                        self.pops[poached].fired_by(poached_firm, 1)
+                        self.pops[poached].hired_by(id_firm, 1)
                         offer -= 1
 
     def cap_all_supply(self):

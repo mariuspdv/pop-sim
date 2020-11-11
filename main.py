@@ -24,7 +24,7 @@ world = World(goods=goods,
               )
 
 
-for i in range(12):
+for i in range(20):
     world.tick(i)
 
 world.summary()
