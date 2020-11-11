@@ -53,6 +53,12 @@ class Firm(Historizor):
 
         return lab_demand
 
+    def cap_supply(self):
+        self.supply = min(self.supply, (self.workers * self.productivity))
+
+    def raise_wages(self, rate):
+        self.wages = (1 + (rate/100)) * self.wages
+
     def update_profits(self, sold, prices):
         """changes the firm's state using sales data"""
         costs = self.wages * self.workers

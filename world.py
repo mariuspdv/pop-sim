@@ -8,6 +8,7 @@ class World:
     EPS = 0.001
     PRICE_CHANGE_CEILING = 1.2
     PRICE_CHANGE_FLOOR = 0.8
+    WAGE_RISE = 5
 
     def __init__(self, goods, firms, pops, prices):
         # Core properties
@@ -118,16 +119,40 @@ class World:
         agg_lab_supply = set_labor_supply()
 
         # For each new job, hire someone random who fulfills the criteria and write it down in pop.employed
+        # If all pops are employed, raise wages and poach a worker from a competitor
         for id_firm, offer in agg_lab_demand.items():
             while offer > 0:
-                [hired] = random.choices(list(agg_lab_supply.keys()), weights=agg_lab_supply.values(), k=1)
-                if agg_lab_supply[hired] <= 0:
-                    continue
+                if set(agg_lab_supply.values()) != {0}:
+                    [hired] = random.choices(list(agg_lab_supply.keys()), weights=agg_lab_supply.values(), k=1)
+                    if agg_lab_supply[hired] <= 0:
+                        continue
+                    else:
+                        offer -= 1
+                        agg_lab_supply[hired] -= 1
+                        self.pops[hired].hired_by(id_firm, 1)
+                        self.firms[id_firm].workers += 1
                 else:
-                    offer -= 1
-                    agg_lab_supply[hired] -= 1
-                    self.pops[hired].hired_by(id_firm, 1)
-                    self.firms[id_firm].workers += 1
+                    low_wage_firm = {firm.id_firm: firm.workers for firm in self.firms.values()
+                                     if firm.wages < self.firms[id_firm].wages}
+                    if low_wage_firm == {}:
+                        self.firms[id_firm].raise_wages(self.WAGE_RISE)
+                        continue
+                    else:
+                        [poached] = random.choices(list(low_wage_firm.keys()), weights=low_wage_firm.values(), k=1)
+
+                        # Update the hiring and firing firms' data and randomly pick a pop in the poached firm
+                        self.firms[id_firm].workers += 1
+                        self.firms[poached].workers -= 1
+
+                        workers = {id_pop: pop.employed_by(poached) for id_pop, pop in self.pops.items()}
+                        [fired] = random.choices(list(workers.keys()), weights=workers.values(), k=1)
+                        self.pops[fired].fired_by(poached, 1)
+                        self.pops[fired].hired_by(id_firm, 1)
+                        offer -= 1
+
+    def cap_all_supply(self):
+        for firm in self.firms.values():
+            firm.cap_supply()
 
     def set_goods_supply(self):
         for firm in self.firms.values():
@@ -144,6 +169,7 @@ class World:
         # Core mechanisms
         self.set_goods_supply()
         self.clear_labor_market()
+        self.cap_all_supply()
         self.clear_goods_market()
         self.update_firms_profits()
 
@@ -154,17 +180,20 @@ class World:
         for firm in self.firms.values():
             p = []
             w = []
+            wage = []
             s = []
             t = []
             for i in range(0, len(self.history)):
                 p.append(round(firm.get_from_history("profits", i), 2))
                 w.append(round(firm.get_from_history("workers", i), 2))
+                wage.append(round(firm.get_from_history("wages", i), 2))
                 s.append(round(firm.get_from_history("supply", i), 2))
                 t.append((firm.get_from_history("workers", i), firm.get_from_history("supply", i),
                           round(firm.get_from_history("profits", i), 2)))
             print(f'Profits of {firm.product}: {p}; total profits: {round(sum(p), 2)}')
             print(f'Supply of {firm.product}: {s};')
             print(f'Workers of {firm.product}: {w}; max: {max(w)}; min: {min(w)}')
+            print(f'Wages of {firm.product}: {wage}')
             print(f'{t}')
             print(f'')
 
