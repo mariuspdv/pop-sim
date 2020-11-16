@@ -13,9 +13,9 @@ needs_3 = [('food', 0, 0.4), ('lodging', 0, 0.4), ('clothes', 0, 0.6), ('luxury'
 employ_1 = {1: 9, 2: 4, 3: 1, 4: 2}
 employ_2 = {1: 0, 2: 3, 3: 3, 4: 0}
 employ_3 = {1: 0, 2: 0, 3: 0, 4: 1}
-pop_1 = Pop(id_pop=1, goods=goods, needs=needs_1, population=20, employed=employ_1)
-pop_2 = Pop(id_pop=2, goods=goods, needs=needs_2, population=6, employed=employ_2)
-pop_3 = Pop(id_pop=3, goods=goods, needs=needs_3, population=1, employed=employ_3)
+pop_1 = Pop(id_pop=1, goods=goods, needs=needs_1, population=30, employed=employ_1)
+pop_2 = Pop(id_pop=2, goods=goods, needs=needs_2, population=10, employed=employ_2)
+pop_3 = Pop(id_pop=3, goods=goods, needs=needs_3, population=2, employed=employ_3)
 
 world = World(goods=goods,
               firms=[firm_1, firm_2, firm_3, firm_4],
@@ -24,7 +24,7 @@ world = World(goods=goods,
               )
 
 
-for i in range(12):
+for i in range(20):
     world.tick(i)
 
 world.summary()

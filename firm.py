@@ -1,11 +1,13 @@
 # Definition of a Firm
 from historizor import Historizor
 import random
+import math
 
 
 class Firm(Historizor):
 
     THROUGHPUT_FLOOR = 0.9
+    WAGE_HIKE = 1.15
 
     def __init__(self, id_firm, product, workers, wages, productivity, profits=0):
         super().__init__()
@@ -31,27 +33,32 @@ class Firm(Historizor):
 
     def set_labor_demand(self, pops):
         max_supply = self.workers * self.productivity
-        lab_demand = 0
+        lab_demand = self.workers
         if self.supply > max_supply:
-            lab_demand = 1
+            lab_demand = math.ceil(self.supply / self.productivity)
         # Firm fires if under 90% production capacity, as long as firing still leaves desired output possible
         # and at least 1 worker (no dying firm yet).
-        elif self.THROUGHPUT_FLOOR * max_supply >= self.supply and self.workers > 1:
-            lab_demand = -1
-            if self.supply > (self.workers - 1) * self.productivity:
-                lab_demand = 0
+        elif self.supply <= self.THROUGHPUT_FLOOR * max_supply and self.workers > 1:
+            lab_demand -= 1
+            if self.supply > lab_demand * self.productivity:
+                lab_demand = self.workers
 
-        if lab_demand == -1:
-            self.workers -= 1
+        if lab_demand < self.workers:
+            workers_to_fire = self.workers - lab_demand
+            self.workers = lab_demand
 
             # Fire a random worker from a POP
-            workers = {id_pop: pop.employed_by(self.id_firm) for id_pop, pop in pops.items()}
-            [fired] = random.choices(list(workers.keys()), weights=workers.values(), k=1)
-            pops[fired].fired_by(self.id_firm, 1)
-
-            lab_demand = 0
+            while workers_to_fire > 0:
+                workers = {id_pop: pop.employed_by(self.id_firm) for id_pop, pop in pops.items()}
+                [fired] = random.choices(list(workers.keys()), weights=workers.values(), k=1)
+                pops[fired].fired_by(self.id_firm, 1)
+                workers_to_fire -= 1
 
         return lab_demand
+
+    def max_wage(self, predicted_profits):
+
+        return min(self.wage * self.WAGE_HIKE, )
 
     def cap_supply(self):
         self.supply = min(self.supply, (self.workers * self.productivity))
