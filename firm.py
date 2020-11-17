@@ -8,6 +8,7 @@ class Firm(Historizor):
 
     THROUGHPUT_FLOOR = 0.9
     WAGE_HIKE = 1.15
+    WAGE_LOSS = 0.01
 
     def __init__(self, id_firm, product, workers, wages, productivity, profits=0):
         super().__init__()
@@ -43,25 +44,24 @@ class Firm(Historizor):
             if self.supply > lab_demand * self.productivity:
                 lab_demand = self.workers
 
-        if lab_demand < self.workers:
-            workers_to_fire = self.workers - lab_demand
-            self.workers = lab_demand
-
+        while lab_demand < self.workers:
             # Fire a random worker from a POP
-            while workers_to_fire > 0:
                 workers = {id_pop: pop.employed_by(self.id_firm) for id_pop, pop in pops.items()}
                 [fired] = random.choices(list(workers.keys()), weights=workers.values(), k=1)
                 pops[fired].fired_by(self.id_firm, 1)
-                workers_to_fire -= 1
+                self.workers -= 1
 
         return lab_demand
 
-    def max_wage(self, predicted_profits):
+    def max_wage(self, employees, price):
+        wage_cap = ((min(self.supply, employees * self.productivity) * price) - min(self.profits, 0)) / employees
+        return min(self.wages * self.WAGE_HIKE, wage_cap)
 
-        return min(self.wage * self.WAGE_HIKE, )
+    def wage_turnover(self):
+        self.wages = self.wages * (1 - self.WAGE_LOSS)
 
     def cap_supply(self):
-        self.supply = min(self.supply, (self.workers * self.productivity))
+        self.supply = max(min(self.supply, (self.workers * self.productivity)), 0)
 
     def raise_wages(self, rate):
         self.wages = (1 + (rate/100)) * self.wages

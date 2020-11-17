@@ -35,7 +35,7 @@ class Pop(Historizor):
     def compute_income(self, firms):
         income_from_work = sum([self.employed[firm.id_firm] * firm.wages for firm in firms.values()])
         income_from_other = 0
-        self.income = income_from_work + income_from_other
+        self.income = (income_from_work + income_from_other) / self.population
 
     def compute_demand(self, prices):
         """finds maximal demand within the bounds of income"""
