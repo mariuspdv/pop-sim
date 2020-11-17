@@ -163,7 +163,6 @@ class World:
                     else:
                         [poached_firm] = random.choices(list(lower_wage_firms.keys()),
                                                         weights=lower_wage_firms.values(), k=1)
-
                         # Update the hiring and firing firms' data and randomly pick a pop in the poached firm
                         self.firms[id_firm].workers += 1
                         self.firms[poached_firm].workers -= 1

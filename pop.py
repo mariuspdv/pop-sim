@@ -33,7 +33,7 @@ class Pop(Historizor):
         self.employed[id_firm] += employees
 
     def compute_income(self, firms):
-        income_from_work = sum([self.employed[firm.id_firm] * firm.wages for firm in firms.values()])
+        income_from_work = sum(workers * firms[id_firm].wages for id_firm, workers in self.employed.items())
         income_from_other = 0
         self.income = (income_from_work + income_from_other) / self.population
 
