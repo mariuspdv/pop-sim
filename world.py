@@ -218,7 +218,8 @@ class World:
                 s.append(round(firm.get_from_history("supply", i), 2))
                 t.append((firm.get_from_history("workers", i), firm.get_from_history("supply", i),
                           round(firm.get_from_history("profits", i), 2)))
-            print(f'Profits of {firm.product}: {p}; total profits: {round(sum(p), 2)}')
+            print(f'Profits of {firm.product}: {p};'
+                  f'total profits: {round(sum(p), 2)}')
             print(f'Supply of {firm.product}: {s};')
             print(f'Workers of {firm.product}: {w}; max: {max(w)}; min: {min(w)}')
             print(f'Wages of {firm.product}: {wage}')

@@ -9,6 +9,7 @@ class Firm(Historizor):
     THROUGHPUT_FLOOR = 0.9
     WAGE_HIKE = 1.15
     WAGE_LOSS = 0.01
+    SUPPLY_CHANGE = 0.05
 
     def __init__(self, id_firm, product, workers, wages, productivity, profits=0):
         super().__init__()
@@ -27,9 +28,9 @@ class Firm(Historizor):
         """Updates the supply of one firm, given previous profits"""
         prev_profit = self.get_from_history('profits', -2, 0) if len(self.history) > 1 else 0
         if self.profits > prev_profit and self.profits > 0:
-            self.supply += 0.25
+            self.supply *= (1 + self.SUPPLY_CHANGE)
         elif self.profits < prev_profit or self.profits < 0:
-            self.supply -= 0.25
+            self.supply *= (1 - self.SUPPLY_CHANGE)
         return {self.product: self.supply}
 
     def set_labor_demand(self, pops):
@@ -55,7 +56,7 @@ class Firm(Historizor):
 
     def max_wage(self, employees, price):
         wage_cap = ((min(self.supply, employees * self.productivity) * price) - min(self.profits, 0)) / employees
-        return min(self.wages * self.WAGE_HIKE, wage_cap)
+        return min(self.wages * self.WAGE_HIKE, wage_cap) if self.profits > 0 else self.wages
 
     def wage_turnover(self):
         self.wages = self.wages * (1 - self.WAGE_LOSS)
