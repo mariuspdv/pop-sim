@@ -150,10 +150,13 @@ class World:
                 max_wage = max(firm.max_wage(agg_lab_demand[id_firm], self.prices[firm.product]), firm.wages)
                 list_of_firms.append((id_firm, max_wage))
             list_of_firms.sort(key=lambda x: x[1])
+            max_wages = {id_firm: max_wage for id_firm, max_wage in list_of_firms}
+            ordrered_firms = [id_firm for id_firm, _ in list_of_firms]
 
-            for id_firm, max_wage in list_of_firms:
+            for id_firm in ordrered_firms:
+                max_wage = max_wages[id_firm]
                 while agg_lab_demand[id_firm] > self.firms[id_firm].workers:
-                    lower_wage_firms = {id_f: self.firms[id_f].workers for id_f, max_salary in list_of_firms
+                    lower_wage_firms = {id_f: self.firms[id_f].workers for id_f, max_salary in max_wages.items()
                                         if max_salary <= max_wage and id_f != id_firm}
                     if len(lower_wage_firms) == 0:
                         break
@@ -174,9 +177,8 @@ class World:
                         self.firms[id_firm].wages = max(self.firms[poached_firm].max_wage(agg_lab_demand[id_firm],
                                                                                           self.prices[self.firms[poached_firm].product]),
                                                         self.firms[id_firm].wages)
-                        new_tuple = poached_firm, self.firms[poached_firm].max_wage(self.firms[poached_firm].workers,
+                        max_wages[poached_firm] = self.firms[poached_firm].max_wage(self.firms[poached_firm].workers,
                                                                                     self.prices[self.firms[poached_firm].product])
-                        list_of_firms = [(x, y) if x != poached_firm else new_tuple for (x, y) in list_of_firms]
 
     def cap_all_supply(self):
         for firm in self.firms.values():
