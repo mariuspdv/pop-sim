@@ -40,6 +40,12 @@ class World:
     def compute_tot_population(self):
         self.tot_population = sum(pop.population for pop in self.pops.values())
 
+    def price_of(self, firm_or_product):
+        if firm_or_product in self.prices:
+            return self.prices[firm_or_product]
+        elif firm_or_product in self.firms:
+            return self.prices[self.firms[firm_or_product].product]
+
     def clear_goods_market(self):
         """Sets aggregate supply, demand, and finds equilibria
            on goods markets through an iterative process,
@@ -112,6 +118,11 @@ class World:
                 tot_lab_demand[id_firm] += firm.set_labor_demand(self.pops)
             return tot_lab_demand
 
+        def randomise_demand(agg_demand):
+            randomizer = [id_firm for id_firm in agg_demand.keys()]
+            random.shuffle(randomizer)
+            return {id_firm: agg_demand[id_firm] for id_firm in randomizer}
+
         def set_labor_supply():
             """Ideally returns a dictionary/class with the number of unemployed
                people of each type in a region. Atm, one unified type."""
@@ -120,13 +131,7 @@ class World:
                 lab_supply[id_pop] += pop.unemployed()
             return lab_supply
 
-        agg_lab_demand = set_labor_demand()
-
-        # Randomise the order
-        test = [id_firm for id_firm in agg_lab_demand.keys()]
-        random.shuffle(test)
-        agg_lab_demand = {id_firm: agg_lab_demand[id_firm] for id_firm in test}
-
+        agg_lab_demand = randomise_demand(set_labor_demand())
         agg_lab_supply = set_labor_supply()
 
         # If no market saturation, everyone hires at actual wage
@@ -167,17 +172,17 @@ class World:
                         self.firms[id_firm].workers += 1
                         self.firms[poached_firm].workers -= 1
 
+                        # Update the pops data by choosing randomly
                         workers = {id_pop: pop.employed_by(poached_firm) for id_pop, pop in self.pops.items()}
                         [fired] = random.choices(list(workers.keys()), weights=workers.values(), k=1)
-                        self.pops[fired].fired_by(poached_firm, 1)
-                        self.pops[fired].hired_by(id_firm, 1)
+                        self.pops[fired].poached_by_from(id_firm, poached_firm, 1)
 
                         # ... and update the wages and max_wages
                         self.firms[id_firm].wages = max(self.firms[poached_firm].max_wage(agg_lab_demand[id_firm],
-                                                                                          self.prices[self.firms[poached_firm].product]),
+                                                                                          self.price_of(poached_firm)),
                                                         self.firms[id_firm].wages)
                         max_wages[poached_firm] = self.firms[poached_firm].max_wage(self.firms[poached_firm].workers,
-                                                                                    self.prices[self.firms[poached_firm].product])
+                                                                                    self.price_of(poached_firm))
 
     def cap_all_supply(self):
         for firm in self.firms.values():
