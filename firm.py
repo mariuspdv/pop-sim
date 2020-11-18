@@ -73,6 +73,7 @@ class Firm(Historizor):
         revenues = sold[self.product] * prices[self.product]
         self.profits = revenues - costs
 
+
 if __name__ == '__main__':
     f = Firm(workers=15, wages=1, productivity=1)
     print(f.set_supply())

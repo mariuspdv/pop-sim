@@ -9,6 +9,7 @@ class World:
     PRICE_CHANGE_CEILING = 1.2
     PRICE_CHANGE_FLOOR = 0.8
     WAGE_RISE = 5
+    WAGE_DECAY = 0.01
 
     def __init__(self, goods, firms, pops, prices):
         # Core properties
@@ -45,6 +46,10 @@ class World:
             return self.prices[firm_or_product]
         elif firm_or_product in self.firms:
             return self.prices[self.firms[firm_or_product].product]
+
+    def wage_decay(self):
+        for firm in self.firms.values():
+            firm.wages *= (1 - self.WAGE_DECAY)
 
     def clear_goods_market(self):
         """Sets aggregate supply, demand, and finds equilibria
@@ -156,9 +161,9 @@ class World:
                 list_of_firms.append((id_firm, max_wage))
             list_of_firms.sort(key=lambda x: x[1])
             max_wages = {id_firm: max_wage for id_firm, max_wage in list_of_firms}
-            ordrered_firms = [id_firm for id_firm, _ in list_of_firms]
+            ordered_firms = [id_firm for id_firm, _ in list_of_firms]
 
-            for id_firm in ordrered_firms:
+            for id_firm in ordered_firms:
                 max_wage = max_wages[id_firm]
                 while agg_lab_demand[id_firm] > self.firms[id_firm].workers:
                     lower_wage_firms = {id_f: self.firms[id_f].workers for id_f, max_salary in max_wages.items()
@@ -201,6 +206,7 @@ class World:
         self.compute_tot_population()
 
         # Core mechanisms
+        self.wage_decay()
         self.set_goods_supply()
         self.clear_labor_market()
         self.cap_all_supply()
@@ -211,7 +217,7 @@ class World:
         self.add_to_history()
 
     def summary(self):
-        for firm in self.firms.values():
+        for id_firm, firm in self.firms.items():
             p = []
             w = []
             wage = []
@@ -227,6 +233,7 @@ class World:
             print(f'Profits of {firm.product}: {p};'
                   f'total profits: {round(sum(p), 2)}')
             print(f'Supply of {firm.product}: {s};')
+            print(f'Price of {firm.product}: {self.price_of(id_firm)};')
             print(f'Workers of {firm.product}: {w}; max: {max(w)}; min: {min(w)}')
             print(f'Wages of {firm.product}: {wage}')
             print(f'{t}')
