@@ -55,8 +55,13 @@ class Firm(Historizor):
         return lab_demand
 
     def max_wage(self, employees, price):
-        wage_cap = ((min(self.supply, employees * self.productivity) * price) - max(self.profits, 0)) / employees
-        return min(self.wages * self.WAGE_HIKE, wage_cap) if self.profits > 0 else self.wages
+
+        if self.profits < 0:
+            return self.wages
+        else:
+            wage_cap = (min(self.supply, employees * self.productivity) * price) - ((employees - 1) * self.wages) \
+                       - max(self.profits, 0)
+            return min(self.wages * self.WAGE_HIKE, wage_cap)
 
     def wage_turnover(self):
         self.wages = self.wages * (1 - self.WAGE_LOSS)

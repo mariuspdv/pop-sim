@@ -206,7 +206,7 @@ class World:
         self.compute_tot_population()
 
         # Core mechanisms
-        self.wage_decay()
+#        self.wage_decay()
         self.set_goods_supply()
         self.clear_labor_market()
         self.cap_all_supply()
