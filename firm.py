@@ -11,14 +11,14 @@ class Firm(Historizor):
     WAGE_LOSS = 0.01
     SUPPLY_CHANGE = 0.05
 
-    def __init__(self, id_firm, product, workers, wages, productivity, profits=0):
+    def __init__(self, id_firm, product, blue_workers, white_workers, blue_wages, white_wages, productivity, profits=0):
         super().__init__()
         self.id_firm = id_firm
         self.product = product
-        self.workers = workers
-        self.wages = wages
+        self.workers = {0: blue_workers, 1: white_workers}
+        self.wages = {0: blue_wages, 1: white_wages}
         self.productivity = productivity
-        self.supply = workers * productivity
+        self.supply = blue_workers * productivity
         self.profits = profits
 
     def __str__(self):
@@ -33,56 +33,48 @@ class Firm(Historizor):
             self.supply *= (1 - self.SUPPLY_CHANGE)
         return {self.product: self.supply}
 
-    def set_labor_demand(self, pops):
-        max_supply = self.workers * self.productivity
-        lab_demand = self.workers
+    def set_blue_labor_demand(self, pops):
+        max_supply = self.workers[0] * self.productivity
+        lab_demand = self.workers[0]
         if self.supply > max_supply:
             lab_demand = math.ceil(self.supply / self.productivity)
         # Firm fires if under 90% production capacity, as long as firing still leaves desired output possible
         # and at least 1 worker (no dying firm yet).
-        elif self.supply <= self.THROUGHPUT_FLOOR * max_supply and self.workers > 1:
+        elif self.supply <= self.THROUGHPUT_FLOOR * max_supply and self.workers[0] > 1:
             lab_demand -= 1
             if self.supply > lab_demand * self.productivity:
-                lab_demand = self.workers
+                lab_demand = self.workers[0]
 
-        while lab_demand < self.workers:
+        while lab_demand < self.workers[0]:
             # Fire a random worker from a POP
-                workers = {id_pop: pop.employed_by(self.id_firm) for id_pop, pop in pops.items()}
+                workers = {id_pop: pop.employed_by(self.id_firm) for id_pop, pop in pops.items() if pop.pop_type == 0}
                 [fired] = random.choices(list(workers.keys()), weights=workers.values(), k=1)
                 pops[fired].fired_by(self.id_firm, 1)
-                self.workers -= 1
+                self.workers[0] -= 1
 
         return lab_demand
 
-    def max_wage(self, employees, price):
+    def max_wage(self, employees, price, pop_level):
 
         if self.profits < 0:
-            return self.wages
+            return self.wages[pop_level]
         else:
-            wage_cap = (min(self.supply, employees * self.productivity) * price) - ((employees - 1) * self.wages) \
-                       - max(self.profits, 0)
-            return min(self.wages * self.WAGE_HIKE, wage_cap)
+            wage_cap = (min(self.supply, employees * self.productivity) * price) \
+                       - ((employees - 1) * self.wages[pop_level]) - max(self.profits, 0)
+            return min(self.wages[pop_level] * self.WAGE_HIKE, wage_cap)
 
     def wage_turnover(self):
-        self.wages = self.wages * (1 - self.WAGE_LOSS)
+        for _, wage in self.wages.items():
+            wage *= (1 - self.WAGE_LOSS)
 
     def cap_supply(self):
-        self.supply = max(min(self.supply, (self.workers * self.productivity)), 0)
+        self.supply = max(min(self.supply, (self.workers[0] * self.productivity)), 0)
 
-    def raise_wages(self, rate):
-        self.wages = (1 + (rate/100)) * self.wages
+    def raise_wages(self, rate, pop_level):
+        self.wages[pop_level] *= (1 + (rate/100))
 
     def update_profits(self, sold, prices):
         """changes the firm's state using sales data"""
-        costs = self.wages * self.workers
+        costs = (self.wages[0] * self.workers[0]) + (self.wages[1] * self.workers[1])
         revenues = sold[self.product] * prices[self.product]
         self.profits = revenues - costs
-
-
-if __name__ == '__main__':
-    f = Firm(workers=15, wages=1, productivity=1)
-    print(f.set_supply())
-    f.add_to_history()
-    f.add_to_history()
-    print(f.history)
-    print(f)

@@ -6,9 +6,10 @@ from goodsvector import GoodsVector
 
 class Pop(Historizor):
 
-    def __init__(self, id_pop, goods, needs, population, employed):
+    def __init__(self, id_pop, pop_type, goods, needs, population, employed):
         super().__init__()
         self.id_pop = id_pop
+        self.pop_type = pop_type
         self.goods = goods
         self.needs = needs
         self._levels = sorted(list(set(l for _, l, _ in needs)))

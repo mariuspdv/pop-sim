@@ -113,14 +113,17 @@ class World:
         self.tot_demand = tot_demand
         self.tot_supply = tot_supply
 
-    def clear_labor_market(self):
+    def clear_labor_market(self, pop_level):
         """Adjust aggregated demand, supply and wages on labor market"""
 
         def set_labor_demand():
             """Returns a dictionary with the demand for each firms"""
             tot_lab_demand = {id_firm: 0 for id_firm in self.firms}
             for id_firm, firm in self.firms.items():
-                tot_lab_demand[id_firm] += firm.set_labor_demand(self.pops)
+                if pop_level == 0:
+                    tot_lab_demand[id_firm] += firm.set_blue_labor_demand(self.pops)
+                elif pop_level == 1:
+                    tot_lab_demand[id_firm] += firm.set_white_labor_demand(self.pops)
             return tot_lab_demand
 
         def randomise_demand(agg_demand):
