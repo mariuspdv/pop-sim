@@ -113,17 +113,14 @@ class World:
         self.tot_demand = tot_demand
         self.tot_supply = tot_supply
 
-    def clear_labor_market(self, pop_level):
+    def clear_labor_market_for(self, pop_level):
         """Adjust aggregated demand, supply and wages on labor market"""
 
         def set_labor_demand():
             """Returns a dictionary with the demand for each firms"""
             tot_lab_demand = {id_firm: 0 for id_firm in self.firms}
             for id_firm, firm in self.firms.items():
-                if pop_level == 0:
-                    tot_lab_demand[id_firm] += firm.set_blue_labor_demand(self.pops)
-                elif pop_level == 1:
-                    tot_lab_demand[id_firm] += firm.set_white_labor_demand(self.pops)
+                tot_lab_demand[id_firm] += firm.set_labor_demand_for(pop_level, self.pops)
             return tot_lab_demand
 
         def randomise_demand(agg_demand):
@@ -134,9 +131,10 @@ class World:
         def set_labor_supply():
             """Ideally returns a dictionary/class with the number of unemployed
                people of each type in a region. Atm, one unified type."""
-            lab_supply = {id_pop: 0 for id_pop in self.pops}
+            lab_supply = {id_pop: 0 for id_pop, pop in self.pops.items() if pop.pop_type == pop_level}
             for id_pop, pop in self.pops.items():
-                lab_supply[id_pop] += pop.unemployed()
+                if pop.pop_type == pop_level:
+                    lab_supply[id_pop] += pop.unemployed()
             return lab_supply
 
         agg_lab_demand = randomise_demand(set_labor_demand())
@@ -146,11 +144,11 @@ class World:
         loop = True
         while set(agg_lab_supply.values()) != {0} and loop:
             for id_firm, lab_demand in agg_lab_demand.items():
-                while lab_demand > self.firms[id_firm].workers:
+                while lab_demand > self.firms[id_firm].workers_for(pop_level):
                     [hired] = random.choices(list(agg_lab_supply.keys()), weights=agg_lab_supply.values(), k=1)
                     agg_lab_supply[hired] -= 1
                     self.pops[hired].hired_by(id_firm, 1)
-                    self.firms[id_firm].workers += 1
+                    self.firms[id_firm].adjust_workers_for(pop_level, +1)
             loop = False
 
         # That's where it gets complicated
@@ -160,7 +158,8 @@ class World:
         else:
             list_of_firms = []
             for id_firm, firm in self.firms.items():
-                max_wage = max(firm.max_wage(agg_lab_demand[id_firm], self.prices[firm.product]), firm.wages)
+                max_wage = max(firm.max_wage(agg_lab_demand[id_firm], self.prices[firm.product], pop_level),
+                               firm.wages_for(pop_level))
                 list_of_firms.append((id_firm, max_wage))
             list_of_firms.sort(key=lambda x: x[1])
             max_wages = {id_firm: max_wage for id_firm, max_wage in list_of_firms}
@@ -168,29 +167,32 @@ class World:
 
             for id_firm in ordered_firms:
                 max_wage = max_wages[id_firm]
-                while agg_lab_demand[id_firm] > self.firms[id_firm].workers:
-                    lower_wage_firms = {id_f: self.firms[id_f].workers for id_f, max_salary in max_wages.items()
-                                        if max_salary <= max_wage and id_f != id_firm}
+                while agg_lab_demand[id_firm] > self.firms[id_firm].workers_for(pop_level):
+                    lower_wage_firms = {id_f: self.firms[id_f].workers_for(pop_level)
+                                        for id_f, max_salary in max_wages.items() if max_salary <= max_wage and id_f != id_firm}
                     if len(lower_wage_firms) == 0:
                         break
                     else:
                         [poached_firm] = random.choices(list(lower_wage_firms.keys()),
                                                         weights=lower_wage_firms.values(), k=1)
                         # Update the hiring and firing firms' data and randomly pick a pop in the poached firm
-                        self.firms[id_firm].workers += 1
-                        self.firms[poached_firm].workers -= 1
+                        self.firms[id_firm].adjust_workers_for(pop_level, +1)
+                        self.firms[poached_firm].adjust_workers_for(pop_level, -1)
 
                         # Update the pops data by choosing randomly
-                        workers = {id_pop: pop.employed_by(poached_firm) for id_pop, pop in self.pops.items()}
+                        workers = {id_pop: pop.employed_by(poached_firm)
+                                   for id_pop, pop in self.pops.items() if pop.pop_type == pop_level}
                         [fired] = random.choices(list(workers.keys()), weights=workers.values(), k=1)
                         self.pops[fired].poached_by_from(id_firm, poached_firm, 1)
 
                         # ... and update the wages and max_wages
                         self.firms[id_firm].wages = max(self.firms[poached_firm].max_wage(agg_lab_demand[id_firm],
-                                                                                          self.price_of(poached_firm)),
-                                                        self.firms[id_firm].wages)
+                                                                                          self.price_of(poached_firm),
+                                                                                          pop_level),
+                                                        self.firms[id_firm].wages_for(pop_level))
                         max_wages[poached_firm] = self.firms[poached_firm].max_wage(self.firms[poached_firm].workers,
-                                                                                    self.price_of(poached_firm))
+                                                                                    self.price_of(poached_firm),
+                                                                                    pop_level)
 
     def cap_all_supply(self):
         for firm in self.firms.values():
@@ -211,7 +213,8 @@ class World:
         # Core mechanisms
 #        self.wage_decay()
         self.set_goods_supply()
-        self.clear_labor_market()
+        self.clear_labor_market_for(0)
+        self.clear_labor_market_for(1)
         self.cap_all_supply()
         self.clear_goods_market()
         self.update_firms_profits()
@@ -228,8 +231,8 @@ class World:
             t = []
             for i in range(0, len(self.history)):
                 p.append(round(firm.get_from_history("profits", i), 2))
-                w.append(round(firm.get_from_history("workers", i), 2))
-                wage.append(round(firm.get_from_history("wages", i), 2))
+                w.append(round(firm.get_from_history("workers", i)[0], 2))
+                wage.append(round(firm.get_from_history("wages", i)[0], 2))
                 s.append(round(firm.get_from_history("supply", i), 2))
                 t.append((firm.get_from_history("workers", i), firm.get_from_history("supply", i),
                           round(firm.get_from_history("profits", i), 2)))

@@ -24,6 +24,15 @@ class Firm(Historizor):
     def __str__(self):
         return f'Employees: {self.workers}'
 
+    def workers_for(self, pop_level):
+        return self.workers[pop_level]
+
+    def adjust_workers_for(self, pop_level, delta):
+        self.workers[pop_level] += delta
+
+    def wages_for(self, pop_level):
+        return self.wages[pop_level]
+
     def set_supply(self):
         """Updates the supply of one firm, given previous profits"""
         prev_profit = self.get_from_history('profits', -2, 0) if len(self.history) > 1 else 0
@@ -54,8 +63,16 @@ class Firm(Historizor):
 
         return lab_demand
 
-    def max_wage(self, employees, price, pop_level):
+    def set_white_labor_demand(self, pops):
+        # TODO : add firm behavior for white collars
+        return 0
 
+    def set_labor_demand_for(self, pop_level, pops):
+        if pop_level == 0:
+            return self.set_blue_labor_demand(pops)
+        return self.set_white_labor_demand(pops)
+
+    def max_wage(self, employees, price, pop_level):
         if self.profits < 0:
             return self.wages[pop_level]
         else:
@@ -64,8 +81,8 @@ class Firm(Historizor):
             return min(self.wages[pop_level] * self.WAGE_HIKE, wage_cap)
 
     def wage_turnover(self):
-        for _, wage in self.wages.items():
-            wage *= (1 - self.WAGE_LOSS)
+        for id_wage in self.wages:
+            self.wages[id_wage] *= (1 - self.WAGE_LOSS)
 
     def cap_supply(self):
         self.supply = max(min(self.supply, (self.workers[0] * self.productivity)), 0)
@@ -75,6 +92,6 @@ class Firm(Historizor):
 
     def update_profits(self, sold, prices):
         """changes the firm's state using sales data"""
-        costs = (self.wages[0] * self.workers[0]) + (self.wages[1] * self.workers[1])
+        costs = sum(self.wages[i] * self.workers[i] for i in range(2))
         revenues = sold[self.product] * prices[self.product]
         self.profits = revenues - costs
