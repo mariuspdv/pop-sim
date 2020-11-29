@@ -35,7 +35,9 @@ class World:
             firm.add_to_history()
         for pop in self.pops.values():
             pop.add_to_history()
-        self.history.append({'tot_demand': self.tot_demand, 'tot_supply': self.tot_supply,
+        self.history.append({'tot_demand': self.tot_demand,
+                             'tot_supply': self.tot_supply,
+                             'tot_population': self.tot_population,
                              'prices': self.prices})
 
     def compute_tot_population(self):
@@ -227,6 +229,35 @@ class World:
         # Technical logistics
         self.add_to_history()
 
+    def export(self):
+        def flatten_dict(prefix, a_dict):
+            return {f"{prefix}_{key}": value for key, value in a_dict.items()}
+
+        full_table = []
+        for i in range(0, len(self.history)):
+            at_i = self.history[i]
+            d = {'t': i, 'population': at_i['tot_population']}
+            d.update(flatten_dict('supply', at_i['tot_supply']))
+            d.update(flatten_dict('demand', at_i['tot_demand']))
+
+            for id_firm, firm in self.firms.items():
+                firm_name = f"firm{id_firm}"
+                for key in {'profits', 'product', 'supply', 'productivity'}:
+                    d[f"{firm_name}_{key}"] = firm.get_from_history(key, i)
+                for pop_level in range(2):
+                    d[f"{firm_name}_workers_{pop_level}"] = firm.get_from_history('workers', i)[pop_level]
+                    d[f"{firm_name}_wages_{pop_level}"] = firm.get_from_history('wages', i)[pop_level]
+
+            for id_pop, pop in self.pops.items():
+                pop_name = f"pop{id_pop}"
+                for key in {'pop_type', 'population', 'income', 'savings', 'thrift'}:
+                    d[f"{pop_name}_{key}"] = pop.get_from_history(key, i)
+                d.update(flatten_dict(f"{pop_name}_demand", pop.get_from_history('demand', i)))
+
+            full_table.append(d)
+
+        return full_table
+
     def summary(self):
         for id_firm, firm in self.firms.items():
             p = []
@@ -255,3 +286,4 @@ class World:
                 print('savings', pop.get_from_history('savings', i))
             print(pop.employed)
             print(pop.income)
+

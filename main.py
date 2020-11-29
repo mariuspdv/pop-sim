@@ -4,6 +4,27 @@ from blue_collar import BlueCollar
 from white_collar import WhiteCollar
 from world import World
 
+
+def write_to_csv(file_name, data):
+    import csv
+    with open(file_name, 'w') as csvfile:
+        fieldnames = data[0].keys()
+        writer = csv.DictWriter(csvfile, fieldnames=fieldnames)
+        writer.writeheader()
+        for line in data:
+            writer.writerow(line)
+
+def nice_print(data):
+    keys = data[0].keys()
+    print(",".join(keys))
+    for line in data:
+        def nicer(x):
+            if type(x) is str:
+                return x
+            return f"{x:.3f}"
+        print(",".join([nicer(line[k]) for k in keys]))
+
+
 goods = {'food', 'lodging', 'clothes', 'luxury'}
 firm_1 = Firm(id_firm=1, product='food', blue_workers=19, white_workers=0, blue_wages=1, white_wages=1, productivity=2)
 firm_2 = Firm(id_firm=2, product='lodging', blue_workers=15, white_workers=0, blue_wages=1, white_wages=1, productivity=2)
@@ -32,4 +53,8 @@ world = World(goods=goods,
 for i in range(30):
     world.tick(i)
 
-world.summary()
+# world.summary()
+full_table = world.export()
+
+write_to_csv('export_run.csv', full_table)
+nice_print(full_table)

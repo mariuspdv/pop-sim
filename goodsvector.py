@@ -8,7 +8,7 @@ class GoodsVector:
             if not(goods >= set(self.demand.keys())):
                 # We chose a strict policy here: goods should be declared in the list of goods in the world
                 raise KeyError()
-            if any(qty < 0 for qty in self.demand.values()):
+            if any(qty < -0.001 for qty in self.demand.values()):
                 # Quantities should be positive
                 raise ValueError()
 
