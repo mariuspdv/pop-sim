@@ -70,7 +70,7 @@ class World:
 
         def set_demand(prices):
             for pop in self.pops.values():
-                pop.set_demand(prices)
+                pop.buy_goods(prices)
 
         def compute_incomes():
             for pop in self.pops.values():
@@ -194,9 +194,10 @@ class World:
                         self.firms[id_firm].set_wages_of(
                             pop_level,
                             max(max_wage_of_poached_firm, self.firms[id_firm].wages_of(pop_level)))
-                        max_wages[poached_firm] = self.firms[poached_firm].max_wage(self.firms[poached_firm].workers,
-                                                                                    self.price_of(poached_firm),
-                                                                                    pop_level)
+                        max_wages[poached_firm] = self.firms[poached_firm].max_wage(
+                            self.firms[poached_firm].workers_for(pop_level),
+                            self.price_of(poached_firm),
+                            pop_level)
 
     def cap_all_supply(self):
         for firm in self.firms.values():
@@ -250,5 +251,7 @@ class World:
             print(f'')
 
         for pop in self.pops.values():
+            for i in range(0, len(self.history)):
+                print('savings', pop.get_from_history('savings', i))
             print(pop.employed)
             print(pop.income)

@@ -16,11 +16,11 @@ needs_4 = [('food', 0, 0.9), ('lodging', 0, 0.9), ('clothes', 0, 0.9), ('luxury'
 employ_1 = {1: 18, 2: 8, 3: 2, 4: 2}
 employ_2 = {1: 0, 2: 6, 3: 4, 4: 0}
 employ_3 = {1: 1, 2: 1, 3: 0, 4: 1}
-employ_3 = {1: 0, 2: 0, 3: 0, 4: 0}
-pop_1 = BlueCollar(id_pop=1, goods=goods, needs=needs_1, population=30, employed=employ_1)
-pop_2 = BlueCollar(id_pop=2, goods=goods, needs=needs_2, population=10, employed=employ_2)
-pop_3 = BlueCollar(id_pop=3, goods=goods, needs=needs_3, population=3, employed=employ_3)
-pop_4 = WhiteCollar(id_pop=4, goods=goods, needs=needs_3, population=3, employed=employ_3)
+employ_4 = {1: 0, 2: 0, 3: 0, 4: 0}
+pop_1 = BlueCollar(id_pop=1, goods=goods, needs=needs_1, population=30, employed=employ_1, savings=3)
+pop_2 = BlueCollar(id_pop=2, goods=goods, needs=needs_2, population=10, employed=employ_2, savings=1)
+pop_3 = BlueCollar(id_pop=3, goods=goods, needs=needs_3, population=3, employed=employ_3, savings=2)
+pop_4 = WhiteCollar(id_pop=4, goods=goods, needs=needs_3, population=3, employed=employ_4, savings=0)
 
 world = World(goods=goods,
               firms=[firm_1, firm_2, firm_3, firm_4],
