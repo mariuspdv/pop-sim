@@ -30,8 +30,11 @@ class Firm(Historizor):
     def adjust_workers_for(self, pop_level, delta):
         self.workers[pop_level] += delta
 
-    def wages_for(self, pop_level):
+    def wages_of(self, pop_level):
         return self.wages[pop_level]
+
+    def set_wages_of(self, pop_level, wage):
+        self.wages[pop_level] = wage
 
     def set_supply(self):
         """Updates the supply of one firm, given previous profits"""

@@ -159,7 +159,7 @@ class World:
             list_of_firms = []
             for id_firm, firm in self.firms.items():
                 max_wage = max(firm.max_wage(agg_lab_demand[id_firm], self.prices[firm.product], pop_level),
-                               firm.wages_for(pop_level))
+                               firm.wages_of(pop_level))
                 list_of_firms.append((id_firm, max_wage))
             list_of_firms.sort(key=lambda x: x[1])
             max_wages = {id_firm: max_wage for id_firm, max_wage in list_of_firms}
@@ -186,10 +186,14 @@ class World:
                         self.pops[fired].poached_by_from(id_firm, poached_firm, 1)
 
                         # ... and update the wages and max_wages
-                        self.firms[id_firm].wages = max(self.firms[poached_firm].max_wage(agg_lab_demand[id_firm],
-                                                                                          self.price_of(poached_firm),
-                                                                                          pop_level),
-                                                        self.firms[id_firm].wages_for(pop_level))
+                        max_wage_of_poached_firm = self.firms[poached_firm].max_wage(
+                            agg_lab_demand[id_firm],
+                            self.price_of(poached_firm),
+                            pop_level)
+
+                        self.firms[id_firm].set_wages_of(
+                            pop_level,
+                            max(max_wage_of_poached_firm, self.firms[id_firm].wages_of(pop_level)))
                         max_wages[poached_firm] = self.firms[poached_firm].max_wage(self.firms[poached_firm].workers,
                                                                                     self.price_of(poached_firm),
                                                                                     pop_level)
