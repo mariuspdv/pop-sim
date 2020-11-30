@@ -29,7 +29,7 @@ def nice_print(data):
 goods = {'food', 'lodging', 'clothes', 'luxury'}
 firm_1 = Firm(id_firm=1, product='food', blue_workers=19, white_workers=1, blue_wages=1, white_wages=1, productivity=2)
 firm_2 = Firm(id_firm=2, product='lodging', blue_workers=15, white_workers=1, blue_wages=1, white_wages=1, productivity=2)
-firm_3 = Firm(id_firm=3, product='clothes', blue_workers=10, white_workers=1, blue_wages=1, white_wages=1, productivity=1.5)
+firm_3 = Firm(id_firm=3, product='clothes', blue_workers=6, white_workers=1, blue_wages=1, white_wages=1, productivity=1.5)
 firm_4 = Firm(id_firm=4, product='luxury', blue_workers=3, white_workers=0, blue_wages=1, white_wages=1, productivity=1)
 needs_1 = [('food', 0, 0.6), ('lodging', 0, 0.5), ('clothes', 1, 0.3), ('luxury', 2, 0.6)]
 needs_2 = [('food', 0, 0.6), ('lodging', 0, 0.6), ('clothes', 1, 0.4), ('luxury', 2, 2)]
@@ -51,7 +51,7 @@ world = World(goods=goods,
               )
 
 
-for i in range(30):
+for i in range(100):
     world.tick(i)
 
 full_table = world.export()

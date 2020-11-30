@@ -19,7 +19,8 @@ class Firm(Historizor):
         self.workers = {0: blue_workers, 1: white_workers}
         self.wages = {0: blue_wages, 1: white_wages}
         self.productivity = productivity
-        self.supply = blue_workers * productivity
+        self.supply_goal = blue_workers * productivity
+        self.supply = 0
         self.profits = profits
 
     def __str__(self):
@@ -41,21 +42,21 @@ class Firm(Historizor):
         """Updates the supply of one firm, given previous profits"""
         prev_profit = self.get_from_history('profits', -2, 0) if len(self.history) > 1 else 0
         if self.profits > prev_profit and self.profits > 0:
-            self.supply *= (1 + self.SUPPLY_CHANGE)
+            self.supply_goal *= (1 + self.SUPPLY_CHANGE)
         elif self.profits < prev_profit or self.profits < 0:
-            self.supply *= (1 - self.SUPPLY_CHANGE)
-        return {self.product: self.supply}
+            self.supply_goal *= (1 - self.SUPPLY_CHANGE)
+        return {self.product: self.supply_goal}
 
     def set_blue_labor_demand(self, pops):
         max_supply = self.workers[0] * self.productivity
         lab_demand = self.workers[0]
-        if self.supply > max_supply:
-            lab_demand = math.ceil(self.supply / self.productivity)
+        if self.supply_goal > max_supply:
+            lab_demand = math.ceil(self.supply_goal / self.productivity)
         # Firm fires if under 90% production capacity, as long as firing still leaves desired output possible
         # and at least 1 worker (no dying firm yet).
-        elif self.supply <= self.THROUGHPUT_FLOOR * max_supply and self.workers[0] > 1:
+        elif self.supply_goal <= self.THROUGHPUT_FLOOR * max_supply and self.workers[0] > 1:
             lab_demand -= 1
-            if self.supply > lab_demand * self.productivity:
+            if self.supply_goal > lab_demand * self.productivity:
                 lab_demand = self.workers[0]
 
         while lab_demand < self.workers[0]:
@@ -86,9 +87,9 @@ class Firm(Historizor):
     def max_wage(self, employees, price, pop_level):
         def revenue():
             if pop_level == 0:
-                return min(self.supply, employees * self.productivity) * self.productivity_for(self.workers[1]) * price
+                return min(self.supply_goal, employees * self.productivity) * self.productivity_for(self.workers[1]) * price
             elif pop_level == 1:
-                return min(self.supply, self.workers[0] * self.productivity) * self.productivity_for(employees) * price
+                return min(self.supply_goal, self.workers[0] * self.productivity) * self.productivity_for(employees) * price
 
         def costs():
             cost = 0
@@ -122,9 +123,9 @@ class Firm(Historizor):
 
     def adjust_supply(self):
         # Capping supply
-        self.supply = max(min(self.supply, (self.workers[0] * self.productivity)), 0)
+        self.supply_goal = max(min(self.supply_goal, (self.workers[0] * self.productivity)), 0)
         # Adjusting to productivity
-        self.supply *= self.productivity_for(self.workers[1])
+        self.supply = self.supply_goal * self.productivity_for(self.workers[1])
 
     def raise_wages(self, rate, pop_level):
         self.wages[pop_level] *= (1 + (rate/100))
