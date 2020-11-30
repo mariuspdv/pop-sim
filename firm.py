@@ -10,6 +10,7 @@ class Firm(Historizor):
     WAGE_HIKE = 1.15
     WAGE_LOSS = 0.01
     SUPPLY_CHANGE = 0.05
+    WHITE_RATIO = 0.15
 
     def __init__(self, id_firm, product, blue_workers, white_workers, blue_wages, white_wages, productivity, profits=0):
         super().__init__()
@@ -59,16 +60,23 @@ class Firm(Historizor):
 
         while lab_demand < self.workers[0]:
             # Fire a random worker from a POP
-                workers = {id_pop: pop.employed_by(self.id_firm) for id_pop, pop in pops.items() if pop.pop_type == 0}
-                [fired] = random.choices(list(workers.keys()), weights=workers.values(), k=1)
-                pops[fired].fired_by(self.id_firm, 1)
-                self.workers[0] -= 1
+            workers = {id_pop: pop.employed_by(self.id_firm) for id_pop, pop in pops.items() if pop.pop_type == 0}
+            [fired] = random.choices(list(workers.keys()), weights=workers.values(), k=1)
+            pops[fired].fired_by(self.id_firm, 1)
+            self.workers[0] -= 1
 
         return lab_demand
 
     def set_white_labor_demand(self, pops):
-        # TODO : add firm behavior for white collars
-        return 0
+        ideal_demand = self.workers[0] * (self.WHITE_RATIO / (1 - self.WHITE_RATIO))
+        while ideal_demand < self.workers[1]:
+            # Fire a random worker from a POP
+            workers = {id_pop: pop.employed_by(self.id_firm) for id_pop, pop in pops.items() if pop.pop_type == 1}
+            [fired] = random.choices(list(workers.keys()), weights=workers.values(), k=1)
+            pops[fired].fired_by(self.id_firm, 1)
+            self.workers[1] -= 1
+
+        return int(ideal_demand)
 
     def set_labor_demand_for(self, pop_level, pops):
         if pop_level == 0:
@@ -76,19 +84,47 @@ class Firm(Historizor):
         return self.set_white_labor_demand(pops)
 
     def max_wage(self, employees, price, pop_level):
+        def revenue():
+            if pop_level == 0:
+                return min(self.supply, employees * self.productivity) * self.productivity_for(self.workers[1]) * price
+            elif pop_level == 1:
+                return min(self.supply, self.workers[0] * self.productivity) * self.productivity_for(employees) * price
+
+        def costs():
+            cost = 0
+            for i in range(2):
+                if i == pop_level:
+                    cost += (employees - 1) * self.wages[pop_level]
+                else:
+                    cost += self.workers[i] * self.wages[i]
+            return cost
+
         if self.profits < 0:
             return self.wages[pop_level]
         else:
-            wage_cap = (min(self.supply, employees * self.productivity) * price) \
-                       - ((employees - 1) * self.wages[pop_level]) - max(self.profits, 0)
+            wage_cap = revenue() - costs() - self.profits
             return min(self.wages[pop_level] * self.WAGE_HIKE, wage_cap)
+
+    def productivity_for(self, white_workers):
+        ratio = white_workers / (white_workers + self.workers[0]) if white_workers != 0 else 0
+
+        def productivity_boost(x):
+            if x < self.WHITE_RATIO:
+                return math.log(1 + 4 * x - 10 * x**2)
+            else:
+                return math.log(1 + 4 * self.WHITE_RATIO - 10 * self.WHITE_RATIO**2)
+
+        return 1 + productivity_boost(ratio)
 
     def wage_turnover(self):
         for id_wage in self.wages:
             self.wages[id_wage] *= (1 - self.WAGE_LOSS)
 
-    def cap_supply(self):
+    def adjust_supply(self):
+        # Capping supply
         self.supply = max(min(self.supply, (self.workers[0] * self.productivity)), 0)
+        # Adjusting to productivity
+        self.supply *= self.productivity_for(self.workers[1])
 
     def raise_wages(self, rate, pop_level):
         self.wages[pop_level] *= (1 + (rate/100))

@@ -172,7 +172,7 @@ class World:
                 while agg_lab_demand[id_firm] > self.firms[id_firm].workers_for(pop_level):
                     lower_wage_firms = {id_f: self.firms[id_f].workers_for(pop_level)
                                         for id_f, max_salary in max_wages.items() if max_salary <= max_wage and id_f != id_firm}
-                    if len(lower_wage_firms) == 0:
+                    if len(lower_wage_firms) == 0 or sum(lower_wage_firms.values()) == 0:
                         break
                     else:
                         [poached_firm] = random.choices(list(lower_wage_firms.keys()),
@@ -201,9 +201,9 @@ class World:
                             self.price_of(poached_firm),
                             pop_level)
 
-    def cap_all_supply(self):
+    def adjust_all_supply(self):
         for firm in self.firms.values():
-            firm.cap_supply()
+            firm.adjust_supply()
 
     def set_goods_supply(self):
         for firm in self.firms.values():
@@ -222,7 +222,7 @@ class World:
         self.set_goods_supply()
         self.clear_labor_market_for(0)
         self.clear_labor_market_for(1)
-        self.cap_all_supply()
+        self.adjust_all_supply()
         self.clear_goods_market()
         self.update_firms_profits()
 
@@ -282,8 +282,6 @@ class World:
             print(f'')
 
         for pop in self.pops.values():
-            for i in range(0, len(self.history)):
-                print('savings', pop.get_from_history('savings', i))
             print(pop.employed)
             print(pop.income)
 
