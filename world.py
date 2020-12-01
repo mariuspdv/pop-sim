@@ -26,6 +26,11 @@ class World:
         self.tot_demand = {}
         self.tot_supply = {}
         self.tot_population = 0
+        self.unemployment_rate = 0
+        self.gdp = 0
+        self.gdp_per_capita = 0
+        self.price_level = 0
+        self.adjusted_gdp = 0
 
         # Technical logistics
         self.history = []
@@ -42,6 +47,44 @@ class World:
 
     def compute_tot_population(self):
         self.tot_population = sum(pop.population for pop in self.pops.values())
+
+    def find_unemployment_rate(self):
+        employed = 0
+        for pop in self.pops.values():
+            employed += sum(pop.employed.values())
+        self.unemployment_rate = 1 - (employed / self.tot_population)
+
+    def compute_gdp(self):
+        self.gdp = sum(qty * self.prices[good] for good, qty in self.tot_demand.items())
+
+    def compute_gdp_per_capita(self):
+        self.gdp_per_capita = self.gdp / self.tot_population
+
+    def compute_price_level(self):
+        """Computes the price of basic necessities for the average
+           person by taking the average of level 0 needs across
+           the population and computes a price level from there"""
+        survival_goods = {}
+        for pop in self.pops.values():
+            for good, level, qty in pop.needs:
+                if level == 0:
+                    if good in survival_goods:
+                        survival_goods[good] += qty * pop.population
+                    else:
+                        survival_goods[good] = qty * pop.population
+        self.price_level = sum(qty * self.prices[good] for good, qty in survival_goods.items()) / self.tot_population
+
+    def compute_adjusted_gdp(self):
+        """To interpret as the number of average basic needs produced in terms of value"""
+        self.adjusted_gdp = self.gdp / self.price_level
+
+    def compute_aggregates(self):
+        self.compute_tot_population()
+        self.find_unemployment_rate()
+        self.compute_gdp()
+        self.compute_gdp_per_capita()
+        self.compute_price_level()
+        self.compute_adjusted_gdp()
 
     def price_of(self, firm_or_product):
         if firm_or_product in self.prices:
@@ -215,7 +258,7 @@ class World:
 
     def tick(self, t: int):
         # Compute useful aggregate(s)
-        self.compute_tot_population()
+        self.compute_aggregates()
 
         # Core mechanisms
 #        self.wage_decay()
