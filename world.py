@@ -29,8 +29,11 @@ class World:
         self.unemployment_rate = 0
         self.gdp = 0
         self.gdp_per_capita = 0
-        self.price_level = 0
+        self.price_level = None
         self.adjusted_gdp = 0
+        self.initial_price_level = None
+        self.indexed_price_level = None
+        self.inflation = 0
 
         # Technical logistics
         self.history = []
@@ -48,6 +51,8 @@ class World:
                              'gdp': self.gdp,
                              'gdp_per_capita': self.gdp_per_capita,
                              'price_level': self.price_level,
+                             'indexed_price_level': self.indexed_price_level,
+                             'inflation': self.inflation,
                              'adjusted_gdp': self.adjusted_gdp})
 
     def compute_tot_population(self):
@@ -69,6 +74,7 @@ class World:
         """Computes the price of basic necessities for the average
            person by taking the average of level 0 needs across
            the population and computes a price level from there"""
+        previous_price_level = self.price_level
         survival_goods = {}
         for pop in self.pops.values():
             for good, level, qty in pop.needs:
@@ -78,6 +84,11 @@ class World:
                     else:
                         survival_goods[good] = qty * pop.population
         self.price_level = sum(qty * self.prices[good] for good, qty in survival_goods.items()) / self.tot_population
+        if self.initial_price_level is None:
+            self.initial_price_level = self.price_level
+        self.indexed_price_level = self.price_level / self.initial_price_level * 100
+        if previous_price_level is not None:
+            self.inflation = self.price_level / previous_price_level
 
     def compute_adjusted_gdp(self):
         """To interpret as the number of average basic needs produced in terms of value"""
@@ -286,6 +297,7 @@ class World:
             at_i = self.history[i]
             d = {'t': i, 'population': at_i['tot_population'], 'unemployment': at_i['unemployment'],
                  'gdp': at_i['gdp'], 'gdp_per_capita': at_i['gdp_per_capita'], 'price_level': at_i['price_level'],
+                 'indexed_price_level': at_i['indexed_price_level'], 'inflation': at_i['inflation'],
                  'adjusted_gdp': at_i['adjusted_gdp']}
             d.update(flatten_dict('supply', at_i['tot_supply']))
             d.update(flatten_dict('demand', at_i['tot_demand']))
