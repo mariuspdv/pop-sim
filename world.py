@@ -88,7 +88,7 @@ class World:
             self.initial_price_level = self.price_level
         self.indexed_price_level = self.price_level / self.initial_price_level * 100
         if previous_price_level is not None:
-            self.inflation = self.price_level / previous_price_level
+            self.inflation = self.price_level / previous_price_level - 1
 
     def compute_adjusted_gdp(self):
         """To interpret as the number of average basic needs produced in terms of value"""
