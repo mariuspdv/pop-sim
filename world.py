@@ -43,7 +43,12 @@ class World:
         self.history.append({'tot_demand': self.tot_demand,
                              'tot_supply': self.tot_supply,
                              'tot_population': self.tot_population,
-                             'prices': self.prices})
+                             'prices': self.prices,
+                             'unemployment': self.unemployment_rate,
+                             'gdp': self.gdp,
+                             'gdp_per_capita': self.gdp_per_capita,
+                             'price_level': self.price_level,
+                             'adjusted_gdp': self.adjusted_gdp})
 
     def compute_tot_population(self):
         self.tot_population = sum(pop.population for pop in self.pops.values())
@@ -279,7 +284,9 @@ class World:
         full_table = []
         for i in range(0, len(self.history)):
             at_i = self.history[i]
-            d = {'t': i, 'population': at_i['tot_population']}
+            d = {'t': i, 'population': at_i['tot_population'], 'unemployment': at_i['unemployment'],
+                 'gdp': at_i['gdp'], 'gdp_per_capita': at_i['gdp_per_capita'], 'price_level': at_i['price_level'],
+                 'adjusted_gdp': at_i['adjusted_gdp']}
             d.update(flatten_dict('supply', at_i['tot_supply']))
             d.update(flatten_dict('demand', at_i['tot_demand']))
 
