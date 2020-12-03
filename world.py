@@ -210,9 +210,13 @@ class World:
                               if firm.wages_of(pop_level) <= hiring_firm.wages_of(pop_level) and firm != hiring_firm}
                 labor_pool['unemployed'] = sum(agg_lab_supply.values())
 
-                # If labor pool empty, then leave
+                # If labor pool empty, then fill with higher-wage firms up to a ceiling (30%?)
                 if set(labor_pool.values()) == {0}:
-                    break
+                    labor_pool = {id_f: firm.workers_for(pop_level) for id_f, firm in self.firms.items()
+                                  if firm.wages_of(pop_level) <= (hiring_firm.wages_of(pop_level) * 1.3)
+                                  and firm != hiring_firm}
+                    if set(labor_pool.values()) == {0}:
+                        break
 
                 # Randomly select someone in the labor pool
                 [hired] = random.choices(list(labor_pool.keys()), weights=labor_pool.values(), k=1)
