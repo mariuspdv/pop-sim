@@ -47,6 +47,10 @@ class Pop(Historizor):
 
     def compute_demand(self, prices):
         """finds maximal demand within the bounds of income"""
+        def add_to_demand(d1, d2):
+            for good, qty in d2.items():
+                d1[good] += qty
+
         demand = {good: 0 for good in self.goods}
         income = self.income
         for level in self._levels:
@@ -54,7 +58,7 @@ class Pop(Historizor):
                 income *= (1 - self.thrift)
             value_level = sum(prices[good] * qty for good, l, qty in self.needs if l == level)
             if value_level <= income:
-                demand.update({good: qty for good, l, qty in self.needs if l == level})
+                add_to_demand(demand, {good: qty for good, l, qty in self.needs if l == level})
                 income -= value_level
                 continue
             if level == 0:
@@ -63,7 +67,7 @@ class Pop(Historizor):
                 complement = min(self.savings, need)
                 income += complement
             discount = income / value_level
-            demand.update({good: qty * discount for good, l, qty in self.needs if l == level})
+            add_to_demand(demand, {good: qty * discount for good, l, qty in self.needs if l == level})
             break
         return {good: qty * self.population for good, qty in demand.items()}
 

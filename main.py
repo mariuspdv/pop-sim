@@ -7,7 +7,7 @@ from world import World
 
 def write_to_csv(file_name, data):
     import csv
-    with open(file_name, 'w') as csvfile:
+    with open(file_name, 'w', newline='') as csvfile:
         fieldnames = data[0].keys()
         writer = csv.DictWriter(csvfile, fieldnames=fieldnames)
         writer.writeheader()
@@ -50,7 +50,7 @@ employ_4 = {1: 1, 2: 1, 3: 1, 4: 0}
 pop_1 = BlueCollar(id_pop=1, goods=goods, needs=needs_1, population=30, employed=employ_1, savings=3)
 pop_2 = BlueCollar(id_pop=2, goods=goods, needs=needs_2, population=10, employed=employ_2, savings=1)
 pop_3 = BlueCollar(id_pop=3, goods=goods, needs=needs_3, population=3, employed=employ_3, savings=2)
-pop_4 = WhiteCollar(id_pop=4, goods=goods, needs=needs_3, population=3, employed=employ_4, savings=0)
+pop_4 = WhiteCollar(id_pop=4, goods=goods, needs=needs_3, population=5, employed=employ_4, savings=0)
 
 world = World(goods=goods,
               firms=[firm_1, firm_2, firm_3, firm_4],
@@ -59,7 +59,7 @@ world = World(goods=goods,
               )
 
 
-for i in range(30):
+for i in range(50):
     world.tick(i)
 
 full_table = world.export()

@@ -38,6 +38,13 @@ class Firm(Historizor):
     def set_wages_of(self, pop_level, wage):
         self.wages[pop_level] = wage
 
+    def hire(self, pop_level, new_wage, delta=1):
+        self.workers[pop_level] += delta
+        average_wage = (self.wages_of(pop_level) * (self.workers[pop_level] - delta) + new_wage * delta) \
+                       / self.workers[pop_level]
+        self.set_wages_of(pop_level, average_wage)
+
+
     def set_supply(self):
         """Updates the supply of one firm, given previous profits"""
         prev_profit = self.get_from_history('profits', -2, 0) if len(self.history) > 1 else 0

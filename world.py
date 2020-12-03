@@ -209,13 +209,14 @@ class World:
                 labor_pool = {id_f: firm.workers_for(pop_level) for id_f, firm in self.firms.items()
                               if firm.wages_of(pop_level) <= hiring_firm.wages_of(pop_level) and firm != hiring_firm}
                 labor_pool['unemployed'] = sum(agg_lab_supply.values())
+                labor_pool = {k: v for k, v in labor_pool.items() if v > 0}
 
                 # If labor pool empty, then fill with higher-wage firms up to a ceiling (30%?)
-                if set(labor_pool.values()) == {0}:
+                if len(labor_pool) == 0:
                     labor_pool = {id_f: firm.workers_for(pop_level) for id_f, firm in self.firms.items()
                                   if firm.wages_of(pop_level) <= (hiring_firm.wages_of(pop_level) * 1.3)
-                                  and firm != hiring_firm}
-                    if set(labor_pool.values()) == {0}:
+                                  and firm != hiring_firm and firm.workers_for(pop_level) > 0}
+                    if len(labor_pool) == 0:
                         break
 
                 # Randomly select someone in the labor pool
@@ -226,12 +227,9 @@ class World:
                     [hired_pop] = random.choices(list(agg_lab_supply.keys()), weights=agg_lab_supply.values(), k=1)
 
                     # Then hire the right workers, and update wages
-                    hiring_firm.adjust_workers_for(pop_level, +1)
+                    hiring_firm.hire(pop_level, hiring_firm.wages_of(pop_level) * self.UNEMP_MALUS, 1)
                     self.pops[hired_pop].hired_by(id_firm, 1)
                     agg_lab_supply[hired_pop] -= 1
-                    hiring_firm.wages[pop_level] = (hiring_firm.wages_of(pop_level) * (hiring_firm.workers[pop_level] - 1)
-                                                    + hiring_firm.wages_of(pop_level) * self.UNEMP_MALUS) \
-                                                   / hiring_firm.workers[pop_level]
 
                 else:
                     poached_firm = self.firms[hired]
@@ -241,12 +239,9 @@ class World:
                     [hired_pop] = random.choices(list(employed.keys()), weights=employed.values(), k=1)
 
                     # Poach the worker and update wages and pop data
-                    hiring_firm.adjust_workers_for(pop_level, +1)
+                    hiring_firm.hire(pop_level, poached_firm.wages_of(pop_level) * self.POACHED_BONUS, 1)
                     poached_firm.adjust_workers_for(pop_level, -1)
                     self.pops[hired_pop].poached_by_from(id_firm, hired, 1)
-                    hiring_firm.wages[pop_level] = (hiring_firm.wages_of(pop_level) * (hiring_firm.workers[pop_level] - 1)
-                                                    + hiring_firm.wages_of(pop_level) * self.POACHED_BONUS) \
-                                                   / hiring_firm.workers[pop_level]
 
     def adjust_all_supply(self):
         for firm in self.firms.values():
