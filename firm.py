@@ -146,7 +146,7 @@ class Firm(Historizor):
         revenues = sold[self.product] * prices[self.product]
         self.profits = revenues - costs
         # If no debt and profits, then save some. If in debt or losses, all profits/losses in account.
-        if self.profits > 0 and self.account > 0:
+        if self.profits > 0 and self.account >= 0:
             self.account += self.SAVINGS_RATE * self.profits
         else:
             self.account += self.profits

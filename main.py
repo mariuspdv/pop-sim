@@ -56,11 +56,14 @@ pop_2 = BlueCollar(id_pop=2, goods=goods, needs=needs_2, population=10, employed
 pop_3 = BlueCollar(id_pop=3, goods=goods, needs=needs_3, population=3, employed=employ_3, savings=2)
 pop_4 = WhiteCollar(id_pop=4, goods=goods, needs=needs_4, population=5, employed=employ_4, savings=0)
 pop_5 = Capitalist(id_pop=5, goods=goods, needs=needs_5, population=1, employed={}, savings=3)
+firms = [firm_1, firm_2, firm_3, firm_4]
+initial_shares = {1: 0, 2: 0, 3: 0, 4: 0, 5: 10}
 
 world = World(goods=goods,
-              firms=[firm_1, firm_2, firm_3, firm_4],
+              firms=firms,
               prices={'food': 0.7, 'lodging': 0.6, 'clothes': 0.5, 'luxury': 1},
-              pops=[pop_1, pop_2, pop_3, pop_4]
+              pops=[pop_1, pop_2, pop_3, pop_4, pop],
+              depositary={id_firm: initial_shares for id_firm in range(1, len(firms) + 1)}
               )
 
 

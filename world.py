@@ -13,12 +13,13 @@ class World:
     UNEMP_MALUS = .95
     POACHED_BONUS = 1.05
 
-    def __init__(self, goods, firms, pops, prices):
+    def __init__(self, goods, firms, pops, prices, depositary):
         # Core properties
         self.goods = set(goods)
         self.firms = {firm.id_firm: firm for firm in firms}
         self.pops = {pop.id_pop: pop for pop in pops}
         self.prices = prices
+        self.depositary = depositary
 
         # Check consistency between prices and goods
         if not (set(prices) <= goods):
@@ -114,6 +115,18 @@ class World:
         for firm in self.firms.values():
             firm.wages *= (1 - self.WAGE_DECAY)
 
+    def compute_dividends(self):
+        dividends = {id_pop: 0 for id_pop, pop in self.pops.items()}
+        for id_firm, firm in self.firms.items():
+            if firm.profits > 0 and firm.account >= (firm.profits * (1 - firm.SAVINGS_RATE)):
+                tot_dividends = firm.profits * (1 - firm.SAVINGS_RATE)
+                all_shares = sum(self.depositary[id_firm].values())
+                firm_dividends = {id_pop: (tot_dividends * shares / all_shares)
+                                  for id_pop, shares in self.depositary[id_firm].items() if shares != 0}
+                for id_pop, cash in firm_dividends.items():
+                    dividends[id_pop] += cash
+        return dividends
+
     def clear_goods_market(self):
         """Sets aggregate supply, demand, and finds equilibria
            on goods markets through an iterative process,
@@ -136,8 +149,9 @@ class World:
                 pop.buy_goods(prices)
 
         def compute_incomes():
+            dividends = self.compute_dividends()
             for pop in self.pops.values():
-                pop.compute_income(self.firms)
+                pop.compute_income(self.firms, dividends)
 
         # Limit price changes in one tick to a range between PRICE_CHANGE_FLOOR and CEILING
         max_prices = {good: price * self.PRICE_CHANGE_CEILING for good, price in self.prices.items()}
