@@ -10,6 +10,8 @@ class World:
     PRICE_CHANGE_FLOOR = 0.8
     WAGE_RISE = 5
     WAGE_DECAY = 0.01
+    UNEMP_MALUS = .95
+    POACHED_BONUS = 1.05
 
     def __init__(self, goods, firms, pops, prices):
         # Core properties
@@ -201,64 +203,45 @@ class World:
         agg_lab_demand = randomise_demand(set_labor_demand())
         agg_lab_supply = set_labor_supply()
 
-        # If no market saturation, everyone hires at actual wage
-        loop = True
-        while set(agg_lab_supply.values()) != {0} and loop:
-            for id_firm, lab_demand in agg_lab_demand.items():
-                while lab_demand > self.firms[id_firm].workers_for(pop_level):
-                    [hired] = random.choices(list(agg_lab_supply.keys()), weights=agg_lab_supply.values(), k=1)
-                    agg_lab_supply[hired] -= 1
-                    self.pops[hired].hired_by(id_firm, 1)
-                    self.firms[id_firm].adjust_workers_for(pop_level, +1)
-            loop = False
+        for id_firm, lab_demand in agg_lab_demand.items():
+            hiring_firm = self.firms[id_firm]
+            while lab_demand > hiring_firm.workers[pop_level]:
+                labor_pool = {id_f: firm.workers_for(pop_level) for id_f, firm in self.firms.items()
+                              if firm.wages_of(pop_level) <= hiring_firm.wages_of(pop_level) and firm != hiring_firm}
+                labor_pool['unemployed'] = sum(agg_lab_supply.values())
+                labor_pool = {k: v for k, v in labor_pool.items() if v > 0}
 
-        # That's where it gets complicated
-        # If the market is saturated, then we will compute the max wage at ideal supply for every firm,
-        # then rank them this way. Then, starting from the bottom, try to poach other firms by matching their max wage.
-        # Finally, update the poached and poachee firms' max wages.
-        else:
-            list_of_firms = []
-            for id_firm, firm in self.firms.items():
-                max_wage = max(firm.max_wage(agg_lab_demand[id_firm], self.prices[firm.product], pop_level),
-                               firm.wages_of(pop_level))
-                list_of_firms.append((id_firm, max_wage))
-            list_of_firms.sort(key=lambda x: x[1])
-            max_wages = {id_firm: max_wage for id_firm, max_wage in list_of_firms}
-            ordered_firms = [id_firm for id_firm, _ in list_of_firms]
-
-            for id_firm in ordered_firms:
-                max_wage = max_wages[id_firm]
-                while agg_lab_demand[id_firm] > self.firms[id_firm].workers_for(pop_level):
-                    lower_wage_firms = {id_f: self.firms[id_f].workers_for(pop_level)
-                                        for id_f, max_salary in max_wages.items() if max_salary <= max_wage and id_f != id_firm}
-                    if len(lower_wage_firms) == 0 or sum(lower_wage_firms.values()) == 0:
+                # If labor pool empty, then fill with higher-wage firms up to a ceiling (30%?)
+                if len(labor_pool) == 0:
+                    labor_pool = {id_f: firm.workers_for(pop_level) for id_f, firm in self.firms.items()
+                                  if firm.wages_of(pop_level) <= (hiring_firm.wages_of(pop_level) * 1.3)
+                                  and firm != hiring_firm and firm.workers_for(pop_level) > 0}
+                    if len(labor_pool) == 0:
                         break
-                    else:
-                        [poached_firm] = random.choices(list(lower_wage_firms.keys()),
-                                                        weights=lower_wage_firms.values(), k=1)
-                        # Update the hiring and firing firms' data and randomly pick a pop in the poached firm
-                        self.firms[id_firm].adjust_workers_for(pop_level, +1)
-                        self.firms[poached_firm].adjust_workers_for(pop_level, -1)
 
-                        # Update the pops data by choosing randomly
-                        workers = {id_pop: pop.employed_by(poached_firm)
-                                   for id_pop, pop in self.pops.items() if pop.pop_type == pop_level}
-                        [fired] = random.choices(list(workers.keys()), weights=workers.values(), k=1)
-                        self.pops[fired].poached_by_from(id_firm, poached_firm, 1)
+                # Randomly select someone in the labor pool
+                [hired] = random.choices(list(labor_pool.keys()), weights=labor_pool.values(), k=1)
 
-                        # ... and update the wages and max_wages
-                        max_wage_of_poached_firm = self.firms[poached_firm].max_wage(
-                            agg_lab_demand[id_firm],
-                            self.price_of(poached_firm),
-                            pop_level)
+                if hired == 'unemployed':
+                    # Randomly select the origin pop
+                    [hired_pop] = random.choices(list(agg_lab_supply.keys()), weights=agg_lab_supply.values(), k=1)
 
-                        self.firms[id_firm].set_wages_of(
-                            pop_level,
-                            max(max_wage_of_poached_firm, self.firms[id_firm].wages_of(pop_level)))
-                        max_wages[poached_firm] = self.firms[poached_firm].max_wage(
-                            self.firms[poached_firm].workers_for(pop_level),
-                            self.price_of(poached_firm),
-                            pop_level)
+                    # Then hire the right workers, and update wages
+                    hiring_firm.hire(pop_level, hiring_firm.wages_of(pop_level) * self.UNEMP_MALUS, 1)
+                    self.pops[hired_pop].hired_by(id_firm, 1)
+                    agg_lab_supply[hired_pop] -= 1
+
+                else:
+                    poached_firm = self.firms[hired]
+                    # Randomly select the origin pop inside the selected firm
+                    employed = {id_pop: pop.employed_by(hired) for id_pop, pop in self.pops.items()
+                                if pop.pop_type == pop_level}
+                    [hired_pop] = random.choices(list(employed.keys()), weights=employed.values(), k=1)
+
+                    # Poach the worker and update wages and pop data
+                    hiring_firm.hire(pop_level, poached_firm.wages_of(pop_level) * self.POACHED_BONUS, 1)
+                    poached_firm.adjust_workers_for(pop_level, -1)
+                    self.pops[hired_pop].poached_by_from(id_firm, hired, 1)
 
     def adjust_all_supply(self):
         for firm in self.firms.values():
