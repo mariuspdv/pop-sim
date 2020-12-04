@@ -64,7 +64,7 @@ class World:
         employed = 0
         for pop in self.pops.values():
             employed += sum(pop.employed.values())
-        self.unemployment_rate = 1 - (employed / self.tot_population)
+        self.unemployment_rate = (1 - (employed / self.tot_population)) * 100
 
     def compute_gdp(self):
         self.gdp = sum(qty * self.prices[good] for good, qty in self.tot_demand.items())
@@ -90,7 +90,7 @@ class World:
             self.initial_price_level = self.price_level
         self.indexed_price_level = self.price_level / self.initial_price_level * 100
         if previous_price_level is not None:
-            self.inflation = self.price_level / previous_price_level - 1
+            self.inflation = (self.price_level / previous_price_level - 1) * 100
 
     def compute_adjusted_gdp(self):
         """To interpret as the number of average basic needs produced in terms of value"""
@@ -287,7 +287,7 @@ class World:
 
             for id_firm, firm in self.firms.items():
                 firm_name = f"firm{id_firm}"
-                for key in {'profits', 'product', 'supply', 'productivity'}:
+                for key in {'profits', 'product', 'supply', 'productivity', 'account'}:
                     d[f"{firm_name}_{key}"] = firm.get_from_history(key, i)
                 for pop_level in range(2):
                     d[f"{firm_name}_workers_{pop_level}"] = firm.get_from_history('workers', i)[pop_level]

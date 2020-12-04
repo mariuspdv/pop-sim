@@ -11,8 +11,10 @@ class Firm(Historizor):
     WAGE_LOSS = 0.01
     SUPPLY_CHANGE = 0.05
     WHITE_RATIO = 0.15
+    SAVINGS_RATE = 0.5
 
-    def __init__(self, id_firm, product, blue_workers, white_workers, blue_wages, white_wages, productivity, profits=0):
+    def __init__(self, id_firm, product, blue_workers, white_workers, blue_wages, white_wages, productivity, profits=0,
+                 account=0):
         super().__init__()
         self.id_firm = id_firm
         self.product = product
@@ -22,6 +24,7 @@ class Firm(Historizor):
         self.supply_goal = blue_workers * productivity
         self.supply = 0
         self.profits = profits
+        self.account = account
 
     def __str__(self):
         return f'Employees: {self.workers}'
@@ -59,9 +62,9 @@ class Firm(Historizor):
         lab_demand = self.workers[0]
         if self.supply_goal > max_supply:
             lab_demand = math.ceil(self.supply_goal / self.productivity)
-        # Firm fires if under 90% production capacity, as long as firing still leaves desired output possible
-        # and at least 1 worker (no dying firm yet).
-        elif self.supply_goal <= self.THROUGHPUT_FLOOR * max_supply and self.workers[0] > 1:
+        # Firm fires if under 90% production capacity and no savings, as long as firing still leaves desired
+        # output possible and at least 1 worker (no dying firm yet).
+        elif self.supply_goal <= self.THROUGHPUT_FLOOR * max_supply and self.workers[0] > 1 and self.account <= 0:
             lab_demand -= 1
             if self.supply_goal > lab_demand * self.productivity:
                 lab_demand = self.workers[0]
@@ -142,3 +145,8 @@ class Firm(Historizor):
         costs = sum(self.wages[i] * self.workers[i] for i in range(2))
         revenues = sold[self.product] * prices[self.product]
         self.profits = revenues - costs
+        # If no debt and profits, then save some. If in debt or losses, all profits/losses in account.
+        if self.profits > 0 and self.account > 0:
+            self.account += self.SAVINGS_RATE * self.profits
+        else:
+            self.account += self.profits

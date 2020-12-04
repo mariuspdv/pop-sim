@@ -9,4 +9,4 @@ class BlueCollar(Pop):
         super().__init__(id_pop, 0, goods, needs, population, employed, savings, self.THRIFT)
 
     def __str__(self):
-        return f'Blue collar {self.id_pop}: the {self.population} of this town'
+        return f'{self.id_pop}: {self.population} blue collar'
