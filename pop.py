@@ -39,7 +39,7 @@ class Pop(Historizor):
         self.employed[id_firm] += employees
         self.employed[poached_firm] -= employees
 
-    def compute_income(self, firms, dividends):
+    def set_income_from_salary_and_dividends(self, firms, dividends):
         income_from_work = sum(workers * firms[id_firm].wages_of(self.pop_type)
                                for id_firm, workers in self.employed.items())
         income_from_shares = dividends[self.id_pop]

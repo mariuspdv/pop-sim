@@ -25,6 +25,7 @@ class Firm(Historizor):
         self.supply = 0
         self.profits = profits
         self.account = account
+        self.dividends = 0
 
     def __str__(self):
         return f'Employees: {self.workers}'
@@ -46,7 +47,6 @@ class Firm(Historizor):
         average_wage = (self.wages_of(pop_level) * (self.workers[pop_level] - delta) + new_wage * delta) \
                        / self.workers[pop_level]
         self.set_wages_of(pop_level, average_wage)
-
 
     def set_supply(self):
         """Updates the supply of one firm, given previous profits"""
@@ -146,7 +146,11 @@ class Firm(Historizor):
         revenues = sold[self.product] * prices[self.product]
         self.profits = revenues - costs
         # If no debt and profits, then save some. If in debt or losses, all profits/losses in account.
+        self.dividends = 0
         if self.profits > 0 and self.account >= 0:
-            self.account += self.SAVINGS_RATE * self.profits
+            to_keep = self.SAVINGS_RATE * self.profits
+            to_distribute = self.profits - to_keep
+            self.account += to_keep
+            self.dividends += to_distribute
         else:
             self.account += self.profits

@@ -115,18 +115,6 @@ class World:
         for firm in self.firms.values():
             firm.wages *= (1 - self.WAGE_DECAY)
 
-    def compute_dividends(self):
-        dividends = {id_pop: 0 for id_pop, pop in self.pops.items()}
-        for id_firm, firm in self.firms.items():
-            if firm.profits > 0 and firm.account >= (firm.profits * (1 - firm.SAVINGS_RATE)):
-                tot_dividends = firm.profits * (1 - firm.SAVINGS_RATE)
-                all_shares = sum(self.depositary[id_firm].values())
-                firm_dividends = {id_pop: (tot_dividends * shares / all_shares)
-                                  for id_pop, shares in self.depositary[id_firm].items() if shares != 0}
-                for id_pop, cash in firm_dividends.items():
-                    dividends[id_pop] += cash
-        return dividends
-
     def clear_goods_market(self):
         """Sets aggregate supply, demand, and finds equilibria
            on goods markets through an iterative process,
@@ -148,11 +136,6 @@ class World:
             for pop in self.pops.values():
                 pop.buy_goods(prices)
 
-        def compute_incomes():
-            dividends = self.compute_dividends()
-            for pop in self.pops.values():
-                pop.compute_income(self.firms, dividends)
-
         # Limit price changes in one tick to a range between PRICE_CHANGE_FLOOR and CEILING
         max_prices = {good: price * self.PRICE_CHANGE_CEILING for good, price in self.prices.items()}
         min_prices = {good: price * self.PRICE_CHANGE_FLOOR for good, price in self.prices.items()}
@@ -161,7 +144,6 @@ class World:
         tot_supply = aggregate_supply()
 
         # Compute the aggregated demand over all the pops, given a set of prices and incomes
-        compute_incomes()
         tot_demand = aggregate_demand(self.prices)
 
         # Main loop logic :
@@ -269,6 +251,23 @@ class World:
         for firm in self.firms.values():
             firm.update_profits(self.tot_demand, self.prices)
 
+    def pay_salaries_and_dividends(self):
+        dividends = {id_pop: 0 for id_pop, pop in self.pops.items()}
+        for id_firm, firm in self.firms.items():
+            """
+            if firm.profits > 0 and firm.account >= (firm.profits * (1 - firm.SAVINGS_RATE)):
+                tot_dividends = firm.profits * (1 - firm.SAVINGS_RATE)
+            """
+            tot_dividends = firm.dividends
+            if tot_dividends > 0:
+                all_shares = sum(self.depositary[id_firm].values())
+                firm_dividends = {id_pop: (tot_dividends * shares / all_shares)
+                                  for id_pop, shares in self.depositary[id_firm].items() if shares != 0}
+                for id_pop, cash in firm_dividends.items():
+                    dividends[id_pop] += cash
+        for pop in self.pops.values():
+            pop.set_income_from_salary_and_dividends(self.firms, dividends)
+
     def tick(self, t: int):
         # Compute useful aggregate(s)
         self.compute_aggregates()
@@ -279,6 +278,7 @@ class World:
         self.clear_labor_market_for(0)
         self.clear_labor_market_for(1)
         self.adjust_all_supply()
+        self.pay_salaries_and_dividends()
         self.clear_goods_market()
         self.update_firms_profits()
 
