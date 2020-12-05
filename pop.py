@@ -19,9 +19,13 @@ class Pop(Historizor):
         self.employed = employed
         self.savings = savings
         self.thrift = thrift
+        self._world = None
 
     def __str__(self):
         return f'PoP: Hello, we are {self.population}'
+
+    def set_world(self, world):
+        self._world = world
 
     def unemployed(self):
         return self.population - sum(v for _, v in self.employed.items())

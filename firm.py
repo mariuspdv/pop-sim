@@ -26,9 +26,13 @@ class Firm(Historizor):
         self.profits = profits
         self.account = account
         self.dividends = 0
+        self._world = None
 
     def __str__(self):
         return f'Employees: {self.workers}'
+
+    def set_world(self, world):
+        self._world = world
 
     def workers_for(self, pop_level):
         return self.workers[pop_level]
