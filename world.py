@@ -118,6 +118,7 @@ class World:
             firm.set_supply()
 
     def labor_pool_for(self, hiring_id_firm, pop_level, max_wage):
+        """ A Firm can ask the World to give a view of the labour pool currently paid under a certain level"""
         agg_lab_supply = {id_pop: pop.unemployed() for id_pop, pop in self.pops.items() if pop.pop_type == pop_level}
         # a Firm will try first to poach firms that pay less or to hire unemployed workers
         labor_pool = {id_f: firm.workers_for(pop_level) for id_f, firm in self.firms.items()
@@ -135,6 +136,8 @@ class World:
         while len(agg_demand) > 0:
             hiring_id_firm = random.choice(list(agg_demand.keys()))
             hiring_firm = self.firms[hiring_id_firm]
+
+            # The Firm tries to find somebody to recruit on the market in its wage range
             action, parameters = hiring_firm.try_to_match_labor_demand(pop_level, agg_demand[hiring_id_firm])
             if action == "give_up":
                 del agg_demand[hiring_id_firm]
