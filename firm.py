@@ -12,6 +12,9 @@ class Firm(Historizor):
     SUPPLY_CHANGE = 0.05
     WHITE_RATIO = 0.15
     SAVINGS_RATE = 0.5
+    POACHED_BONUS = 1.05
+    INCREASE_CEILING = 1.3
+    UNEMP_MALUS = .95
 
     def __init__(self, id_firm, product, blue_workers, white_workers, blue_wages, white_wages, productivity, profits=0,
                  account=0):
@@ -93,10 +96,37 @@ class Firm(Historizor):
 
         return int(ideal_demand)
 
-    def set_labor_demand_for(self, pop_level, pops):
+    def set_labor_demand_for(self, pop_level):
+        pops = self._world.get_pops()
         if pop_level == 0:
             return self.set_blue_labor_demand(pops)
         return self.set_white_labor_demand(pops)
+
+    def try_to_match_labor_demand(self, pop_level, labor_demand):
+        # Each Firm will try to hire workers to match its target workforce
+        # lab_demand represents the target headcount including the current employees
+
+        # Hire one by one until target is reached
+        if labor_demand <= self.workers_for(pop_level):
+            return "give_up", None
+        # a Firm will try first to poach firms that pay less or to hire unemployed workers
+        labor_pool = self._world.labor_pool_for(self.id_firm, pop_level, self.wages_of(pop_level))
+
+        if len(labor_pool) == 0:
+            # If labor pool empty, then fill with higher-wage firms up to a ceiling
+            labor_pool = self._world.labor_pool_for(self.id_firm, pop_level, self.wages_of(pop_level) * self.INCREASE_CEILING)
+            if len(labor_pool) == 0:
+                # Wages are too expensive : the firm gives up and will not reach its recruitment target
+                return "give_up", None
+
+        # Randomly select someone in the labor pool
+        [id_firm_to_poach] = random.choices(list(labor_pool.keys()), weights=labor_pool.values(), k=1)
+
+        if id_firm_to_poach == 'unemployed':
+            # Hire at the firm's current wage less a malus
+            return 'hire_unemployed', self.wages_of(pop_level) * self.UNEMP_MALUS
+        # Poach the worker by offering a bonus to his/her current salary
+        return "poach", (id_firm_to_poach, self.POACHED_BONUS)
 
     def max_wage(self, employees, price, pop_level):
         def revenue():

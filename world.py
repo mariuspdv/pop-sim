@@ -10,9 +10,6 @@ class World:
     PRICE_CHANGE_FLOOR = 0.8
     WAGE_RISE = 5
     WAGE_DECAY = 0.01
-    UNEMP_MALUS = .95
-    POACHED_BONUS = 1.05
-    INCREASE_CEILING = 1.3
     TO_HISTORIZE = {'tot_demand', 'tot_supply', 'tot_population', 'prices', 'unemployment_rate',
                     'gdp', 'gdp_per_capita', 'price_level', 'indexed_price_level', 'inflation', 'adjusted_gdp'}
 
@@ -48,6 +45,9 @@ class World:
 
         # Technical logistics
         self.history = []
+
+    def get_pops(self):
+        return self.pops
 
     def add_to_history(self):
         """ Historicize World indicators. Cascades to Firms and Pops"""
@@ -117,78 +117,55 @@ class World:
         for firm in self.firms.values():
             firm.set_supply()
 
+    def labor_pool_for(self, hiring_id_firm, pop_level, max_wage):
+        agg_lab_supply = {id_pop: pop.unemployed() for id_pop, pop in self.pops.items() if pop.pop_type == pop_level}
+        # a Firm will try first to poach firms that pay less or to hire unemployed workers
+        labor_pool = {id_f: firm.workers_for(pop_level) for id_f, firm in self.firms.items()
+                      if firm.wages_of(pop_level) <= max_wage and id_f != hiring_id_firm}
+        labor_pool['unemployed'] = sum(agg_lab_supply.values())
+        return {k: v for k, v in labor_pool.items() if v > 0}
+
     def clear_labor_market_for(self, pop_level):
         """Adjust aggregated demand, supply and wages on labor market"""
-
-        def set_labor_demand():
-            """Returns a dictionary with the demand for each firm"""
-            tot_lab_demand = {id_firm: 0 for id_firm in self.firms}
-            for id_firm, firm in self.firms.items():
-                tot_lab_demand[id_firm] += firm.set_labor_demand_for(pop_level, self.pops)
-            return tot_lab_demand
-
-        def set_labor_supply():
-            """Ideally returns a dictionary/class with the number of unemployed
-               people of each type in a region. Atm, one unified type."""
-            lab_supply = {id_pop: 0 for id_pop, pop in self.pops.items() if pop.pop_type == pop_level}
-            for id_pop, pop in self.pops.items():
-                if pop.pop_type == pop_level:
-                    lab_supply[id_pop] += pop.unemployed()
-            return lab_supply
-
-        agg_lab_demand = set_labor_demand()
-        agg_lab_supply = set_labor_supply()
-
-        randomized_id_firm = list(agg_lab_demand.keys())
-        random.shuffle(randomized_id_firm)
-        # Each Firm will try to hire workers to match its target workforce
+        agg_demand = {id_firm: firm.set_labor_demand_for(pop_level) for id_firm, firm in self.firms.items()}
         # lab_demand represents the target headcount including the current employees
+
+        # Hire one by one until target is reached
         # Firms are processed in a random order to ensure equal access to labor market
-        for id_firm in  randomized_id_firm:
-            lab_demand = agg_lab_demand[id_firm]
-            hiring_firm = self.firms[id_firm]
-            # Hire one by one until target is reached
-            while lab_demand > hiring_firm.workers_for(pop_level):
-                # a Firm will try first to poach firms that pay less or to hire unemployed workers
-                labor_pool = {id_f: firm.workers_for(pop_level) for id_f, firm in self.firms.items()
-                              if firm.wages_of(pop_level) <= hiring_firm.wages_of(pop_level) and firm != hiring_firm}
-                labor_pool['unemployed'] = sum(agg_lab_supply.values())
-                labor_pool = {k: v for k, v in labor_pool.items() if v > 0}
+        while len(agg_demand) > 0:
+            hiring_id_firm = random.choice(list(agg_demand.keys()))
+            hiring_firm = self.firms[hiring_id_firm]
+            action, parameters = hiring_firm.try_to_match_labor_demand(pop_level, agg_demand[hiring_id_firm])
+            if action == "give_up":
+                del agg_demand[hiring_id_firm]
+                continue
 
-                if len(labor_pool) == 0:
-                    # If labor pool empty, then fill with higher-wage firms up to a ceiling
-                    labor_pool = {id_f: firm.workers_for(pop_level) for id_f, firm in self.firms.items()
-                                  if firm.wages_of(pop_level) <= (hiring_firm.wages_of(pop_level) * self.INCREASE_CEILING)
-                                  and firm != hiring_firm and firm.workers_for(pop_level) > 0}
-                    if len(labor_pool) == 0:
-                        # Wages are too expensive : the firm gives up and will not reach its recruitment target
-                        break
+            if action == "hire_unemployed":
+                wage = parameters
+                # Find a random Pop with unemployed workers
+                agg_lab_supply = {id_pop: pop.unemployed() for id_pop, pop in self.pops.items() if pop.pop_type == pop_level}
+                [hired_pop] = random.choices(list(agg_lab_supply.keys()), weights=agg_lab_supply.values(), k=1)
+                # Hiring firm hires the worker
+                hiring_firm.hire(pop_level, wage, 1)
+                # Log that in the Pop
+                self.pops[hired_pop].hired_by(hiring_id_firm, 1)
+                # One cleared !
+                agg_demand[hiring_id_firm] -= 1
 
-                # Randomly select someone in the labor pool
-                [id_firm_to_poach] = random.choices(list(labor_pool.keys()), weights=labor_pool.values(), k=1)
-
-                if id_firm_to_poach == 'unemployed':
-                    # Firm hires an unemployed person
-                    # Randomly select the origin pop
-                    [hired_pop] = random.choices(list(agg_lab_supply.keys()), weights=agg_lab_supply.values(), k=1)
-
-                    # Then hire the right workers, at the firm's current wage less a malus
-                    hiring_firm.hire(pop_level, hiring_firm.wages_of(pop_level) * self.UNEMP_MALUS, 1)
-                    self.pops[hired_pop].hired_by(id_firm, 1)
-                    agg_lab_supply[hired_pop] -= 1
-
-                else:
-                    # Firm poaches from another one
-                    firm_to_poach = self.firms[id_firm_to_poach]
-                    # Randomly select the origin pop inside the selected firm
-                    employed = {id_pop: pop.employed_by(id_firm_to_poach) for id_pop, pop in self.pops.items()
-                                if pop.pop_type == pop_level}
-                    [hired_pop] = random.choices(list(employed.keys()), weights=employed.values(), k=1)
-
-                    # Poach the worker by offering a bonus to his/her current salary
-                    hiring_firm.hire(pop_level, firm_to_poach.wages_of(pop_level) * self.POACHED_BONUS, 1)
-                    firm_to_poach.adjust_workers_for(pop_level, -1)
-                    self.pops[hired_pop].poached_by_from(id_firm, id_firm_to_poach, 1)
+            if action == "poach":
+                id_firm_to_poach, poached_bonus = parameters
+                firm_to_poach = self.firms[id_firm_to_poach]
+                # Randomly select the origin pop inside the selected firm
+                employed = {id_pop: pop.employed_by(id_firm_to_poach) for id_pop, pop in self.pops.items() if pop.pop_type == pop_level}
+                [hired_pop] = random.choices(list(employed.keys()), weights=employed.values(), k=1)
+                # Hiring firm hires the worker
+                hiring_firm.hire(pop_level, firm_to_poach.wages_of(pop_level) * poached_bonus, 1)
+                # Log that in the Pop
+                self.pops[hired_pop].poached_by_from(hiring_id_firm, id_firm_to_poach, 1)
+                # Poached firm let the worker flee
+                firm_to_poach.adjust_workers_for(pop_level, -1)
+                # One cleared !
+                agg_demand[hiring_id_firm] -= 1
 
     def adjust_all_supply(self):
         for firm in self.firms.values():
