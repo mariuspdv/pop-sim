@@ -133,9 +133,11 @@ class World:
 
         # Hire one by one until target is reached
         # Firms are processed in a random order to ensure equal access to labor market
+        hiring_id_firm = None
         while len(agg_demand) > 0:
-            hiring_id_firm = random.choice(list(agg_demand.keys()))
-            hiring_firm = self.firms[hiring_id_firm]
+            if hiring_id_firm is None or hiring_id_firm not in agg_demand:
+                hiring_id_firm = random.choice(list(agg_demand.keys()))
+                hiring_firm = self.firms[hiring_id_firm]
 
             # The Firm tries to find somebody to recruit on the market in its wage range
             action, parameters = hiring_firm.try_to_match_labor_demand(pop_level, agg_demand[hiring_id_firm])
