@@ -128,21 +128,21 @@ class World:
 
     def clear_labor_market_for(self, pop_level):
         """Adjust aggregated demand, supply and wages on labor market"""
-        agg_demand = {id_firm: firm.set_labor_demand_for(pop_level) for id_firm, firm in self.firms.items()}
+        target_demand = {id_firm: firm.set_labor_demand_for(pop_level) for id_firm, firm in self.firms.items()}
         # lab_demand represents the target headcount including the current employees
 
         # Hire one by one until target is reached
         # Firms are processed in a random order to ensure equal access to labor market
         hiring_id_firm = None
-        while len(agg_demand) > 0:
-            if hiring_id_firm is None or hiring_id_firm not in agg_demand:
-                hiring_id_firm = random.choice(list(agg_demand.keys()))
+        while len(target_demand) > 0:
+            if hiring_id_firm is None or hiring_id_firm not in target_demand:
+                hiring_id_firm = random.choice(list(target_demand.keys()))
                 hiring_firm = self.firms[hiring_id_firm]
 
             # The Firm tries to find somebody to recruit on the market in its wage range
-            action, parameters = hiring_firm.try_to_match_labor_demand(pop_level, agg_demand[hiring_id_firm])
+            action, parameters = hiring_firm.try_to_match_labor_demand(pop_level, target_demand[hiring_id_firm])
             if action == "give_up":
-                del agg_demand[hiring_id_firm]
+                del target_demand[hiring_id_firm]
                 continue
 
             if action == "hire_unemployed":
@@ -155,7 +155,7 @@ class World:
                 # Log that in the Pop
                 self.pops[hired_pop].hired_by(hiring_id_firm, 1)
                 # One cleared !
-                agg_demand[hiring_id_firm] -= 1
+                target_demand[hiring_id_firm] -= 1
 
             if action == "poach":
                 id_firm_to_poach, poached_bonus = parameters
@@ -170,7 +170,7 @@ class World:
                 # Poached firm let the worker flee
                 firm_to_poach.adjust_workers_for(pop_level, -1)
                 # One cleared !
-                agg_demand[hiring_id_firm] -= 1
+                target_demand[hiring_id_firm] -= 1
 
     def adjust_all_supply(self):
         for firm in self.firms.values():

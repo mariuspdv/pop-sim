@@ -180,11 +180,11 @@ class Firm(Historizor):
         revenues = sold[self.product] * prices[self.product]
         self.profits = revenues - costs
         # If no debt and profits, then save some. If in debt or losses, all profits/losses in account.
-        self.dividends = 0
         if self.profits > 0 and self.account >= 0:
             to_keep = self.SAVINGS_RATE * self.profits
             to_distribute = self.profits - to_keep
             self.account += to_keep
-            self.dividends += to_distribute
+            self.dividends = to_distribute
         else:
             self.account += self.profits
+            self.dividends = 0
