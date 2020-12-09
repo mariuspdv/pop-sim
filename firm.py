@@ -11,8 +11,13 @@ class Firm(Historizor):
     WAGE_LOSS = 0.01
     SUPPLY_CHANGE = 0.05
     WHITE_RATIO = 0.15
+    SAVINGS_RATE = 0.5
+    POACHED_BONUS = 1.05
+    INCREASE_CEILING = 1.3
+    UNEMP_MALUS = .95
 
-    def __init__(self, id_firm, product, blue_workers, white_workers, blue_wages, white_wages, productivity, profits=0):
+    def __init__(self, id_firm, product, blue_workers, white_workers, blue_wages, white_wages, productivity, profits=0,
+                 account=0):
         super().__init__()
         self.id_firm = id_firm
         self.product = product
@@ -22,9 +27,15 @@ class Firm(Historizor):
         self.supply_goal = blue_workers * productivity
         self.supply = 0
         self.profits = profits
+        self.account = account
+        self.dividends = 0
+        self._world = None
 
     def __str__(self):
         return f'Employees: {self.workers}'
+
+    def set_world(self, world):
+        self._world = world
 
     def workers_for(self, pop_level):
         return self.workers[pop_level]
@@ -44,7 +55,6 @@ class Firm(Historizor):
                        / self.workers[pop_level]
         self.set_wages_of(pop_level, average_wage)
 
-
     def set_supply(self):
         """Updates the supply of one firm, given previous profits"""
         prev_profit = self.get_from_history('profits', -2, 0) if len(self.history) > 1 else 0
@@ -59,9 +69,9 @@ class Firm(Historizor):
         lab_demand = self.workers[0]
         if self.supply_goal > max_supply:
             lab_demand = math.ceil(self.supply_goal / self.productivity)
-        # Firm fires if under 90% production capacity, as long as firing still leaves desired output possible
-        # and at least 1 worker (no dying firm yet).
-        elif self.supply_goal <= self.THROUGHPUT_FLOOR * max_supply and self.workers[0] > 1:
+        # Firm fires if under 90% production capacity and no savings, as long as firing still leaves desired
+        # output possible and at least 1 worker (no dying firm yet).
+        elif self.supply_goal <= self.THROUGHPUT_FLOOR * max_supply and self.workers[0] > 1 and self.account <= 0:
             lab_demand -= 1
             if self.supply_goal > lab_demand * self.productivity:
                 lab_demand = self.workers[0]
@@ -86,10 +96,37 @@ class Firm(Historizor):
 
         return int(ideal_demand)
 
-    def set_labor_demand_for(self, pop_level, pops):
+    def set_labor_demand_for(self, pop_level):
+        pops = self._world.get_pops()
         if pop_level == 0:
             return self.set_blue_labor_demand(pops)
         return self.set_white_labor_demand(pops)
+
+    def try_to_match_labor_demand(self, pop_level, labor_demand):
+        # Each Firm will try to hire workers to match its target workforce
+        # lab_demand represents the target headcount including the current employees
+
+        # Hire one by one until target is reached
+        if labor_demand <= self.workers_for(pop_level):
+            return "give_up", None
+        # a Firm will try first to poach firms that pay less or to hire unemployed workers
+        labor_pool = self._world.labor_pool_for(self.id_firm, pop_level, self.wages_of(pop_level))
+
+        if len(labor_pool) == 0:
+            # If labor pool empty, then fill with higher-wage firms up to a ceiling
+            labor_pool = self._world.labor_pool_for(self.id_firm, pop_level, self.wages_of(pop_level) * self.INCREASE_CEILING)
+            if len(labor_pool) == 0:
+                # Wages are too expensive : the firm gives up and will not reach its recruitment target
+                return "give_up", None
+
+        # Randomly select someone in the labor pool
+        [id_firm_to_poach] = random.choices(list(labor_pool.keys()), weights=labor_pool.values(), k=1)
+
+        if id_firm_to_poach == 'unemployed':
+            # Hire at the firm's current wage less a malus
+            return 'hire_unemployed', self.wages_of(pop_level) * self.UNEMP_MALUS
+        # Poach the worker by offering a bonus to his/her current salary
+        return "poach", (id_firm_to_poach, self.POACHED_BONUS)
 
     def max_wage(self, employees, price, pop_level):
         def revenue():
@@ -142,3 +179,12 @@ class Firm(Historizor):
         costs = sum(self.wages[i] * self.workers[i] for i in range(2))
         revenues = sold[self.product] * prices[self.product]
         self.profits = revenues - costs
+        # If no debt and profits, then save some. If in debt or losses, all profits/losses in account.
+        if self.profits > 0 and self.account >= 0:
+            to_keep = self.SAVINGS_RATE * self.profits
+            to_distribute = self.profits - to_keep
+            self.account += to_keep
+            self.dividends = to_distribute
+        else:
+            self.account += self.profits
+            self.dividends = 0
