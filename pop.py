@@ -76,8 +76,6 @@ class Pop(Historizor):
         self.demand = GoodsVector(self.goods, self.compute_demand(prices))
         spendings = sum(prices[good] * qty for good, qty in self.demand.items())
         self.savings += self.income - spendings / self.population
-        if self.savings < -0.01:
-            print(self.savings)
-            raise Exception("A pud'sous")
-
-
+        if self.savings < 0:
+            self.savings = 0
+            print("Money makes the world go round!")
