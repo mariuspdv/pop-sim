@@ -78,4 +78,3 @@ class Pop(Historizor):
         self.savings += self.income - spendings / self.population
         if self.savings < 0:
             self.savings = 0
-            print("Money makes the world go round!")

@@ -214,6 +214,11 @@ class World:
             for pop in self.pops.values():
                 pop.buy_goods(prices)
 
+        def cap_demand(demand, supply):
+            for good, qty in demand.items():
+                if qty > supply[good]:
+                    demand[good] = supply[good]
+
         # Limit price changes in one tick to a range between PRICE_CHANGE_FLOOR and CEILING
         max_prices = {good: price * self.PRICE_CHANGE_CEILING for good, price in self.prices.items()}
         min_prices = {good: price * self.PRICE_CHANGE_FLOOR for good, price in self.prices.items()}
@@ -245,6 +250,7 @@ class World:
 
             # Adjust the new demand given the new set of prices, over all the pops
             tot_demand = aggregate_demand(self.prices)
+            cap_demand(tot_demand, tot_supply)
 
         set_demand(self.prices)
         self.tot_demand = tot_demand
@@ -252,7 +258,7 @@ class World:
 
     def update_firms_profits(self):
         for firm in self.firms.values():
-            firm.update_profits(self.tot_demand, self.prices)
+            firm.update_profits(self.tot_demand, self.tot_supply, self.prices)
 
     def tick(self, t: int):
         # Compute useful aggregate(s)
@@ -291,7 +297,7 @@ class World:
 
             for id_firm, firm in self.firms.items():
                 firm_name = f"firm{id_firm}"
-                for key in {'profits', 'product', 'supply', 'productivity', 'account'}:
+                for key in {'profits', 'product', 'supply', 'sold', 'stock', 'productivity', 'account'}:
                     d[f"{firm_name}_{key}"] = firm.get_from_history(key, i)
                 for pop_level in range(2):
                     d[f"{firm_name}_workers_{pop_level}"] = firm.get_from_history('workers', i)[pop_level]

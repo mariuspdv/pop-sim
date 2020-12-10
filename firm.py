@@ -17,7 +17,7 @@ class Firm(Historizor):
     UNEMP_MALUS = .95
 
     def __init__(self, id_firm, product, blue_workers, white_workers, blue_wages, white_wages, productivity, profits=0,
-                 account=0):
+                 account=0, stock=0):
         super().__init__()
         self.id_firm = id_firm
         self.product = product
@@ -30,6 +30,8 @@ class Firm(Historizor):
         self.account = account
         self.dividends = 0
         self._world = None
+        self.sold = 0
+        self.stock = stock
 
     def __str__(self):
         return f'Employees: {self.workers}'
@@ -174,10 +176,12 @@ class Firm(Historizor):
     def raise_wages(self, rate, pop_level):
         self.wages[pop_level] *= (1 + (rate/100))
 
-    def update_profits(self, sold, prices):
+    def update_profits(self, demand, supply, prices):
         """changes the firm's state using sales data"""
+        self.sold = demand[self.product] * (self.supply / supply[self.product])
+        self.stock += self.supply - self.sold
         costs = sum(self.wages[i] * self.workers[i] for i in range(2))
-        revenues = sold[self.product] * prices[self.product]
+        revenues = self.sold * prices[self.product]
         self.profits = revenues - costs
         # If no debt and profits, then save some. If in debt or losses, all profits/losses in account.
         if self.profits > 0 and self.account >= 0:
