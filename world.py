@@ -199,61 +199,16 @@ class World:
            with price floors and ceilings to limit changes."""
 
         def aggregate_supply():
-            supply = GoodsVector(self.goods)
-            for firm in self.firms.values():
-                supply += {firm.product: firm.supply}
+            supply = {good: [] for good in self.goods}
+            for id_firm, firm in self.firms.items():
+                qty, price = firm.market_supply()
+                supply[firm.product].append((id_firm, qty, price))
             return supply
-
-        def aggregate_demand(prices):
-            demand = GoodsVector(self.goods)
-            for pop in self.pops.values():
-                demand += pop.compute_demand(prices)
-            return demand
-
-        def set_demand(prices):
-            for pop in self.pops.values():
-                pop.buy_goods(prices)
-
-        def cap_demand(demand, supply):
-            for good, qty in demand.items():
-                if qty > supply[good]:
-                    demand[good] = supply[good]
-
-        # Limit price changes in one tick to a range between PRICE_CHANGE_FLOOR and CEILING
-        max_prices = {good: price * self.PRICE_CHANGE_CEILING for good, price in self.prices.items()}
-        min_prices = {good: price * self.PRICE_CHANGE_FLOOR for good, price in self.prices.items()}
 
         # Compute the aggregated supply of goods over all the firms
         tot_supply = aggregate_supply()
-
-        # Compute the aggregated demand over all the pops, given a set of prices and incomes
-        tot_demand = aggregate_demand(self.prices)
-
-        # Main loop logic :
-        #   Adjust iteratively goods' prices then adjust demand accordingly until all
-        #   goods' demands and supplies are equal or until prices are at their limits
-
-        loop = True
-        while loop:
-            loop = False
-            for good in self.goods:
-                # Because prices change by a discrete increment, mathematical equality cannot be reached
-                # We tolerate a difference of a small number EPS
-                if abs(tot_demand[good] - tot_supply[good]) <= self.EPS:
-                    continue
-                if tot_demand[good] > tot_supply[good] and self.prices[good] < max_prices[good]:
-                    self.prices[good] += self.PRICE_INC
-                    loop = True
-                elif tot_demand[good] < tot_supply[good] and self.prices[good] > min_prices[good]:
-                    self.prices[good] -= self.PRICE_INC
-                    loop = True
-
-            # Adjust the new demand given the new set of prices, over all the pops
-            tot_demand = aggregate_demand(self.prices)
-            cap_demand(tot_demand, tot_supply)
-
-        set_demand(self.prices)
-        self.tot_demand = tot_demand
+        # traiter le level 1
+        # puis les autres
         self.tot_supply = tot_supply
 
     def update_firms_profits(self):
@@ -273,7 +228,7 @@ class World:
         # Labor market clearing for WhiteCollars
         self.clear_labor_market_for(1)
 
-        self.adjust_all_supply()
+        # self.adjust_all_supply()
         self.pay_salaries_and_dividends()
         self.clear_goods_market()
         self.update_firms_profits()

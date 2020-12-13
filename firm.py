@@ -32,6 +32,9 @@ class Firm(Historizor):
         self._world = None
         self.sold = 0
         self.stock = stock
+        self.target_margin = 0.20
+        self.price = (sum(self.wages[i] * self.workers[i] for i in range(2))) \
+                     / (self.workers_for(0) * self.adjusted_productivity()) * (1 + self.target_margin)
 
     def __str__(self):
         return f'Employees: {self.workers}'
@@ -58,13 +61,41 @@ class Firm(Historizor):
         self.set_wages_of(pop_level, average_wage)
 
     def set_supply(self):
-        """Updates the supply of one firm, given previous profits"""
+        """Updates the supply of one firm, given previous profits
         prev_profit = self.get_from_history('profits', -2, 0) if len(self.history) > 1 else 0
         if self.profits > prev_profit and self.profits > 0:
             self.supply_goal *= (1 + self.SUPPLY_CHANGE)
         elif self.profits < prev_profit or self.profits < 0:
             self.supply_goal *= (1 - self.SUPPLY_CHANGE)
         return {self.product: self.supply_goal}
+        """
+        # prev_profit = self.get_from_history('profits', -2, 0) if len(self.history) > 1 else 0
+        production = self.workers_for(0) * self.adjusted_productivity()
+        costs = sum(self.wages[i] * self.workers[i] for i in range(2))
+        if self.stock == 0 and self.profits >= 0:
+            self.supply_goal = production * (1 + self.SUPPLY_CHANGE)
+            unit_cost = costs / self.supply_goal
+            if self.price < (unit_cost * (1 + self.target_margin)):
+                self.price *= 1.05
+            return
+
+        if self.stock == 0 and self.profits < 0:
+            unit_cost = costs / production
+            self.supply_goal = production
+            self.price = max(unit_cost, self.price * 1.10)
+            return
+
+        if self.profits >= 0:
+            self.supply_goal = production
+            unit_cost = costs / self.supply_goal
+            if self.price < (unit_cost * (1 + self.target_margin)):
+                self.price *= 1.05
+            return
+
+        if self.profits < 0:
+            self.supply_goal = production * (1 - self.SUPPLY_CHANGE)
+            self.price *= 0.95
+            return
 
     def set_blue_labor_demand(self, pops):
         max_supply = self.workers[0] * self.productivity
@@ -130,48 +161,22 @@ class Firm(Historizor):
         # Poach the worker by offering a bonus to his/her current salary
         return "poach", (id_firm_to_poach, self.POACHED_BONUS)
 
-    def max_wage(self, employees, price, pop_level):
-        def revenue():
-            if pop_level == 0:
-                return min(self.supply_goal, employees * self.productivity) * self.productivity_for(self.workers[1]) * price
-            elif pop_level == 1:
-                return min(self.supply_goal, self.workers[0] * self.productivity) * self.productivity_for(employees) * price
-
-        def costs():
-            cost = 0
-            for i in range(2):
-                if i == pop_level:
-                    cost += (employees - 1) * self.wages[pop_level]
-                else:
-                    cost += self.workers[i] * self.wages[i]
-            return cost
-
-        if self.profits < 0:
-            return self.wages[pop_level]
-        else:
-            wage_cap = revenue() - costs() - self.profits
-            return min(self.wages[pop_level] * self.WAGE_HIKE, wage_cap)
-
-    def productivity_for(self, white_workers):
-        ratio = white_workers / (white_workers + self.workers[0]) if white_workers != 0 else 0
-
+    def adjusted_productivity(self):
         def productivity_boost(x):
             if x < self.WHITE_RATIO:
                 return math.log(1 + 4 * x - 10 * x**2)
-            else:
-                return math.log(1 + 4 * self.WHITE_RATIO - 10 * self.WHITE_RATIO**2)
+            return math.log(1 + 4 * self.WHITE_RATIO - 10 * self.WHITE_RATIO**2)
 
-        return 1 + productivity_boost(ratio)
+        white_workers = self.workers_for(1)
+        ratio = white_workers / (white_workers + self.workers_for(0)) if white_workers != 0 else 0
+        return (1 + productivity_boost(ratio)) * self.productivity
 
     def wage_turnover(self):
         for id_wage in self.wages:
             self.wages[id_wage] *= (1 - self.WAGE_LOSS)
 
-    def adjust_supply(self):
-        # Capping supply
-        self.supply_goal = max(min(self.supply_goal, (self.workers[0] * self.productivity)), 0)
-        # Adjusting to productivity
-        self.supply = self.supply_goal * self.productivity_for(self.workers[1])
+    def market_supply(self):
+        return self.stock + self.workers_for(0) * self.adjusted_productivity(), self.price
 
     def raise_wages(self, rate, pop_level):
         self.wages[pop_level] *= (1 + (rate/100))
