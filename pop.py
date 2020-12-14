@@ -16,6 +16,7 @@ class Pop(Historizor):
         self.population = population
         self.income = 0
         self.demand = GoodsVector(self.goods)
+        self.consumption = GoodsVector(self.goods)
         self.employed = employed
         self.savings = savings
         self.thrift = thrift
@@ -78,3 +79,17 @@ class Pop(Historizor):
         self.savings += self.income - spendings / self.population
         if self.savings < 0:
             self.savings = 0
+
+    def buy_good(self, good, level, qty, price):
+        if self.income < (price * qty):
+            if level == 0:
+                if self.savings > ((price * qty) - self.income):
+                    self.savings -= (price * qty) - self.income
+                    self.income = 0
+                    self.consumption[good] += qty
+                    return 1
+            return self.income / price
+
+        self.income -= price * qty
+        self.consumption[good] += qty
+        return 1

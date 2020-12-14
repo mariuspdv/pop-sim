@@ -26,6 +26,7 @@ class Firm(Historizor):
         self.productivity = productivity
         self.supply_goal = blue_workers * productivity
         self.supply = 0
+        self.revenue = 0
         self.profits = profits
         self.account = account
         self.dividends = 0
@@ -176,18 +177,21 @@ class Firm(Historizor):
             self.wages[id_wage] *= (1 - self.WAGE_LOSS)
 
     def market_supply(self):
-        return self.stock + self.workers_for(0) * self.adjusted_productivity(), self.price
+        self.revenue = 0
+        self.stock += self.workers_for(0) * self.adjusted_productivity()
+        return self.stock, self.price
 
     def raise_wages(self, rate, pop_level):
         self.wages[pop_level] *= (1 + (rate/100))
 
+    def sell_goods(self, qty):
+        self.stock -= qty
+        self.revenue += self.price * qty
+
     def update_profits(self, demand, supply, prices):
         """changes the firm's state using sales data"""
-        self.sold = demand[self.product] * (self.supply / supply[self.product])
-        self.stock += self.supply - self.sold
         costs = sum(self.wages[i] * self.workers[i] for i in range(2))
-        revenues = self.sold * prices[self.product]
-        self.profits = revenues - costs
+        self.profits = self.revenue - costs
         # If no debt and profits, then save some. If in debt or losses, all profits/losses in account.
         if self.profits > 0 and self.account >= 0:
             to_keep = self.SAVINGS_RATE * self.profits
