@@ -205,8 +205,38 @@ class World:
                 supply[firm.product].append((id_firm, qty, price))
             return supply
 
+        def market_queue(level):
+            queue = []
+            for id_pop, pop in self.pops.items():
+                for need in pop.needs:
+                    good, l, qty = need
+                    if l == level:
+                        q, r = divmod(qty * pop.population, 0.5)
+                        for x in range(int(q)):
+                            queue.append((id_pop, good, 0.5))
+                        if r != 0:
+                            queue.append((id_pop, good, r))
+            random.shuffle(queue)
+            return queue
+
         # Compute the aggregated supply of goods over all the firms
         tot_supply = aggregate_supply()
+
+        for i in range(3):
+            #if i == 1:
+                # pops save some money
+            level_demand = market_queue(i)
+
+            for id_pop, good, qty in level_demand:
+                # choose a seller in tot_supply
+                random.choices([i[0] for i in tot_supply[good]], weights=[(1 / i[2]**2) for i in tot_supply[good]], k=1)
+                # buy_good for the person (create method)
+                # sell_good for firm (create method)
+
+                # if issues with rounding or money, solve here
+
+
+
         # traiter le level 1
         # puis les autres
         self.tot_supply = tot_supply
