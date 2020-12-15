@@ -75,20 +75,20 @@ class Firm(Historizor):
         costs = sum(self.wages[i] * self.workers[i] for i in range(2))
         if self.stock == 0 and self.profits >= 0:
             self.supply_goal = production * (1 + self.SUPPLY_CHANGE)
-            unit_cost = costs / self.supply_goal
+            unit_cost = costs / self.supply_goal if self.supply_goal != 0 else 0
             if self.price < (unit_cost * (1 + self.target_margin)):
                 self.price *= 1.05
             return
 
         if self.stock == 0 and self.profits < 0:
-            unit_cost = costs / production
+            unit_cost = costs / production if self.supply_goal != 0 else 0
             self.supply_goal = production
             self.price = max(unit_cost, self.price * 1.10)
             return
 
         if self.profits >= 0:
             self.supply_goal = production
-            unit_cost = costs / self.supply_goal
+            unit_cost = costs / self.supply_goal if self.supply_goal != 0 else 0
             if self.price < (unit_cost * (1 + self.target_margin)):
                 self.price *= 1.05
             return

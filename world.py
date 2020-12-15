@@ -245,9 +245,10 @@ class World:
                         level_demand = [(id_p, g, q) for id_p, g, q in level_demand if g == good]
                         break
                     elif len(firm_pool) == 1:
-                        id_f, stock, price = tot_supply[good][0]
+                        [id_f] = firm_pool
                     else:
-                        [id_f] = random.choices(firm_pool, weights=[(1 / n[2]**2) for n in tot_supply[good]], k=1)
+                        prices_pool = [(1 / n[2] ** 2) for n in tot_supply[good] if self.firms[n[0]].stock != 0]
+                        [id_f] = random.choices(firm_pool, weights=prices_pool, k=1)
 
                     selling_firm = self.firms[id_f]
                     sold = min(selling_firm.stock, qty)
