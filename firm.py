@@ -99,15 +99,15 @@ class Firm(Historizor):
             return
 
     def set_blue_labor_demand(self, pops):
-        max_supply = self.workers[0] * self.productivity
+        max_supply = self.workers[0] * self.adjusted_productivity()
         lab_demand = self.workers[0]
         if self.supply_goal > max_supply:
-            lab_demand = math.ceil(self.supply_goal / self.productivity)
-        # Firm fires if under 90% production capacity and no savings, as long as firing still leaves desired
+            lab_demand = math.ceil(self.supply_goal / self.adjusted_productivity())
+        # Firm fires if under production capacity and no savings, as long as firing still leaves desired
         # output possible and at least 1 worker (no dying firm yet).
-        elif self.supply_goal <= self.THROUGHPUT_FLOOR * max_supply and self.workers[0] > 1 and self.account <= 0:
+        elif self.supply_goal < max_supply and self.workers[0] > 1 and self.account <= 0:
             lab_demand -= 1
-            if self.supply_goal > lab_demand * self.productivity:
+            if self.supply_goal > lab_demand * self.adjusted_productivity():
                 lab_demand = self.workers[0]
 
         while lab_demand < self.workers[0]:
@@ -178,6 +178,7 @@ class Firm(Historizor):
 
     def market_supply(self):
         self.revenue = 0
+        self.sold = 0
         self.stock += self.workers_for(0) * self.adjusted_productivity()
         return self.stock, self.price
 
@@ -186,6 +187,7 @@ class Firm(Historizor):
 
     def sell_goods(self, qty):
         self.stock -= qty
+        self.sold += qty
         self.revenue += self.price * qty
 
     def update_profits(self, demand, supply, prices):

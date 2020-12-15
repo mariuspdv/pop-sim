@@ -70,7 +70,7 @@ class World:
 
     def compute_gdp(self):
         """ Compute the total value of demanded good"""
-        self.gdp = sum(qty * self.prices[good] for good, qty in self.tot_demand.items())
+        self.gdp = sum([(firm.sold * firm.price) for firm in self.firms.values()])
 
     def compute_gdp_per_capita(self):
         """ GDP per person"""
@@ -303,7 +303,7 @@ class World:
 
             for id_firm, firm in self.firms.items():
                 firm_name = f"firm{id_firm}"
-                for key in {'profits', 'product', 'supply', 'sold', 'stock', 'productivity', 'account'}:
+                for key in {'profits', 'product', 'sold', 'stock', 'price', 'productivity', 'account'}:
                     d[f"{firm_name}_{key}"] = firm.get_from_history(key, i)
                 for pop_level in range(2):
                     d[f"{firm_name}_workers_{pop_level}"] = firm.get_from_history('workers', i)[pop_level]

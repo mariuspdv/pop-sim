@@ -73,13 +73,6 @@ class Pop(Historizor):
             break
         return {good: qty * self.population for good, qty in demand.items()}
 
-    def buy_goods(self, prices):
-        self.demand = GoodsVector(self.goods, self.compute_demand(prices))
-        spendings = sum(prices[good] * qty for good, qty in self.demand.items())
-        self.savings += self.income - spendings / self.population
-        if self.savings < 0:
-            self.savings = 0
-
     def buy_good(self, good, level, qty, price):
         if self.income < (price * qty):
             if level == 0:
