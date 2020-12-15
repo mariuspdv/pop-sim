@@ -236,9 +236,19 @@ class World:
                 pop = self.pops[id_pop]
                 loop = True
                 while qty != 0 and loop:
+                    if level != 0 and pop.income == 0:
+                        level_demand = [(id_p, g, q) for id_p, g, q in level_demand if id_p != id_pop]
+
                     # choose a seller in tot_supply
-                    [id_f] = random.choices([n[0] for n in tot_supply[good]],
-                                          weights=[(1 / n[2]**2) for n in tot_supply[good]], k=1)
+                    firm_pool = [n[0] for n in tot_supply[good] if self.firms[n[0]].stock != 0]
+                    if len(firm_pool) == 0:
+                        level_demand = [(id_p, g, q) for id_p, g, q in level_demand if g == good]
+                        break
+                    elif len(firm_pool) == 1:
+                        id_f, stock, price = tot_supply[good][0]
+                    else:
+                        [id_f] = random.choices(firm_pool, weights=[(1 / n[2]**2) for n in tot_supply[good]], k=1)
+
                     selling_firm = self.firms[id_f]
                     sold = min(selling_firm.stock, qty)
                     discount = pop.buy_good(good, level, sold, selling_firm.price)

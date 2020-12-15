@@ -68,11 +68,11 @@ world = World(goods=goods,
               )
 
 
-for i in range(100):
+for i in range(10):
     world.tick(i)
 
 full_table = world.export()
 
 write_to_csv('export_run.csv', full_table)
-nice_print(full_table)
+#nice_print(full_table)
 world.summary()

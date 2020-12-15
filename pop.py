@@ -48,7 +48,7 @@ class Pop(Historizor):
         income_from_work = sum(workers * firms[id_firm].wages_of(self.pop_type)
                                for id_firm, workers in self.employed.items())
         income_from_shares = dividends[self.id_pop]
-        self.income = (income_from_work + income_from_shares) / self.population
+        self.income = income_from_work + income_from_shares
 
     def compute_demand(self, prices):
         """finds maximal demand within the bounds of income"""
@@ -88,7 +88,10 @@ class Pop(Historizor):
                     self.income = 0
                     self.consumption[good] += qty
                     return 1
-            return self.income / price
+            discount = self.income / price
+            self.income = 0
+            self.consumption[good] += qty * discount
+            return discount
 
         self.income -= price * qty
         self.consumption[good] += qty
