@@ -81,7 +81,7 @@ class Pop(Historizor):
                     self.income = 0
                     self.consumption[good] += qty
                     return 1
-            discount = self.income / price
+            discount = self.income / (price * qty)
             self.income = 0
             self.consumption[good] += qty * discount
             return discount
