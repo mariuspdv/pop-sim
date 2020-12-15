@@ -199,10 +199,10 @@ class World:
            with price floors and ceilings to limit changes."""
 
         def aggregate_supply():
-            supply = {good: [] for good in self.goods}
+            supply = {good: {} for good in self.goods}
             for id_firm, firm in self.firms.items():
                 qty, price = firm.market_supply()
-                supply[firm.product].append((id_firm, qty, price))
+                supply[firm.product][id_firm]= price
             return supply
 
         def market_queue(level):
@@ -227,38 +227,43 @@ class World:
         for level in range(3):
             if level == 1:
                 for id_pop, pop in self.pops.items():
+                    # TODO mettre un méthode "mettre de coté" dans Pop
                     pop.savings += pop.income * pop.thrift
                     pop.income *= (1 - pop.thrift)
 
             level_demand = market_queue(level)
-
+            broke_pops = set()
+            sold_out_goods = set()
             for id_pop, good, qty in level_demand:
+                if id_pop in broke_pops or good in sold_out_goods:
+                    continue
                 pop = self.pops[id_pop]
-                loop = True
-                while qty != 0 and loop:
+                while qty != 0:
                     if level != 0 and pop.income == 0:
-                        level_demand = [(id_p, g, q) for id_p, g, q in level_demand if id_p != id_pop]
+                        broke_pops.add(id_pop)
+                        break
 
                     # choose a seller in tot_supply
-                    firm_pool = [n[0] for n in tot_supply[good] if self.firms[n[0]].stock != 0]
+                    firm_pool = [id_firm for id_firm in tot_supply[good] if self.firms[id_firm].has_stock()]
                     if len(firm_pool) == 0:
-                        level_demand = [(id_p, g, q) for id_p, g, q in level_demand if g == good]
+                        sold_out_goods.add(good)
                         break
                     elif len(firm_pool) == 1:
                         [id_f] = firm_pool
                     else:
-                        prices_pool = [(1 / n[2] ** 2) for n in tot_supply[good] if self.firms[n[0]].stock != 0]
+                        prices_pool = [1 / (p ** 2) for id_firm, p in tot_supply[good].items()
+                                       if self.firms[id_firm].has_stock()]
                         [id_f] = random.choices(firm_pool, weights=prices_pool, k=1)
 
                     selling_firm = self.firms[id_f]
                     sold = min(selling_firm.stock, qty)
                     discount = pop.buy_good(good, level, sold, selling_firm.price)
-
-                    if discount != 1:
-                        loop = False
-
                     qty -= sold * discount
                     selling_firm.sell_goods(sold * discount)
+
+                    if discount != 1:
+                        break
+
 
         self.tot_supply = tot_supply
 
@@ -298,8 +303,8 @@ class World:
             at_i = self.history[i]
             d = {'t': i}
             d.update({k: at_i[k] for k in to_display})
-            d.update(flatten_dict('supply', at_i['tot_supply']))
-            d.update(flatten_dict('demand', at_i['tot_demand']))
+            #d.update(flatten_dict('supply', at_i['tot_supply']))
+            #d.update(flatten_dict('demand', at_i['tot_demand']))
 
             for id_firm, firm in self.firms.items():
                 firm_name = f"firm{id_firm}"

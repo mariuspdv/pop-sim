@@ -99,18 +99,18 @@ class Firm(Historizor):
             return
 
     def set_blue_labor_demand(self, pops):
-        max_supply = self.workers[0] * self.adjusted_productivity()
-        lab_demand = self.workers[0]
+        productivity = self.adjusted_productivity()
+        max_supply = self.workers_for(0) * productivity
         if self.supply_goal > max_supply:
-            lab_demand = math.ceil(self.supply_goal / self.adjusted_productivity())
+            lab_demand = math.ceil(self.supply_goal / productivity)
         # Firm fires if under production capacity and no savings, as long as firing still leaves desired
         # output possible and at least 1 worker (no dying firm yet).
-        elif self.supply_goal < max_supply and self.workers[0] > 1 and self.account <= 0:
-            lab_demand -= 1
-            if self.supply_goal > lab_demand * self.adjusted_productivity():
-                lab_demand = self.workers[0]
+        elif self.supply_goal < max_supply and self.workers_for(0) > 1 and self.account <= 0:
+            lab_demand = math.ceil(self.supply_goal / productivity)
+        else:
+            lab_demand = self.workers_for(0)
 
-        while lab_demand < self.workers[0]:
+        while self.workers_for(0) > lab_demand:
             # Fire a random worker from a POP
             workers = {id_pop: pop.employed_by(self.id_firm) for id_pop, pop in pops.items() if pop.pop_type == 0}
             [fired] = random.choices(list(workers.keys()), weights=workers.values(), k=1)
@@ -181,6 +181,9 @@ class Firm(Historizor):
         self.sold = 0
         self.stock += self.workers_for(0) * self.adjusted_productivity()
         return self.stock, self.price
+
+    def has_stock(self):
+        return self.stock > 0
 
     def raise_wages(self, rate, pop_level):
         self.wages[pop_level] *= (1 + (rate/100))
