@@ -193,7 +193,7 @@ class Firm(Historizor):
         self.sold += qty
         self.revenue += self.price * qty
 
-    def update_profits(self, demand, supply, prices):
+    def update_profits(self):
         """changes the firm's state using sales data"""
         costs = sum(self.wages[i] * self.workers[i] for i in range(2))
         self.profits = self.revenue - costs

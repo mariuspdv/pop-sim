@@ -15,6 +15,7 @@ class Pop(Historizor):
         self._levels = sorted(list(set(l for _, l, _ in needs)))
         self.population = population
         self.income = 0
+        self.available_income = self.income
         self.demand = GoodsVector(self.goods)
         self.consumption = GoodsVector(self.goods)
         self.employed = employed
@@ -49,6 +50,7 @@ class Pop(Historizor):
                                for id_firm, workers in self.employed.items())
         income_from_shares = dividends[self.id_pop]
         self.income = income_from_work + income_from_shares
+        self.available_income = self.income
 
     def compute_demand(self, prices):
         """finds maximal demand within the bounds of income"""

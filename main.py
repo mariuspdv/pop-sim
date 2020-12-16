@@ -62,7 +62,6 @@ initial_shares = {1: 0, 2: 0, 3: 0, 4: 0, 5: 10}
 
 world = World(goods=goods,
               firms=firms,
-              prices={'food': 0.7, 'lodging': 0.6, 'clothes': 0.5, 'luxury': 1},
               pops=[pop_1, pop_2, pop_3, pop_4, pop_5],
               depositary={id_firm: initial_shares for id_firm in range(1, len(firms) + 1)}
               )
@@ -74,5 +73,5 @@ for i in range(100):
 full_table = world.export()
 
 write_to_csv('export_run.csv', full_table)
-nice_print(full_table)
-world.summary()
+#nice_print(full_table)
+#world.summary()

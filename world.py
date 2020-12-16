@@ -10,10 +10,10 @@ class World:
     PRICE_CHANGE_FLOOR = 0.8
     WAGE_RISE = 5
     WAGE_DECAY = 0.01
-    TO_HISTORIZE = {'tot_demand', 'tot_supply', 'tot_population', 'prices', 'unemployment_rate',
-                    'gdp', 'gdp_per_capita', 'price_level', 'indexed_price_level', 'inflation', 'adjusted_gdp'}
+    TO_HISTORIZE = {'tot_demand', 'tot_supply', 'tot_population', 'unemployment_rate', 'gdp', 'gdp_per_capita',
+                    'price_level', 'indexed_price_level', 'inflation', 'adjusted_gdp'}
 
-    def __init__(self, goods, firms, pops, prices, depositary):
+    def __init__(self, goods, firms, pops, depositary):
         # Core properties
         self.goods = set(goods)
         self.firms = {firm.id_firm: firm for firm in firms}
@@ -23,12 +23,7 @@ class World:
         for pop in self.pops.values():
             pop.set_world(self)
 
-        self.prices = prices
         self.depositary = depositary
-
-        # Check consistency between prices and goods
-        if not (set(prices) <= goods):
-            raise KeyError()
 
         # Computed aggregates
         self.tot_demand = {}
@@ -37,6 +32,7 @@ class World:
         self.unemployment_rate = 0
         self.gdp = 0
         self.gdp_per_capita = 0
+        self.average_price = {good: 0 for good in self.goods}
         self.price_level = None
         self.adjusted_gdp = 0
         self.initial_price_level = None
@@ -92,7 +88,17 @@ class World:
                         survival_goods[good] += qty * pop.population
                     else:
                         survival_goods[good] = qty * pop.population
-        self.price_level = sum(qty * self.prices[good] for good, qty in survival_goods.items()) / self.tot_population
+
+        prices = {good: [] for good in self.goods}
+        for firm in self.firms.values():
+            prices[firm.product].append((firm.sold, firm.price))
+        for good in self.goods:
+            good_gdp = sum([qty * price for qty, price in prices[good]])
+            good_sold = sum([qty for qty, price in prices[good]])
+            if good_sold != 0:
+                self.average_price[good] = good_gdp / good_sold
+
+        self.price_level = sum(qty * self.average_price[good] for good, qty in survival_goods.items()) / self.tot_population
         if self.initial_price_level is None:
             self.initial_price_level = self.price_level
         self.indexed_price_level = self.price_level / self.initial_price_level * 100
@@ -111,6 +117,10 @@ class World:
         self.compute_gdp_per_capita()
         self.compute_price_level()
         self.compute_adjusted_gdp()
+
+    def reset_consumption(self):
+        for pop in self.pops.values():
+            pop.consumption = GoodsVector(self.goods)
 
     def set_goods_supply(self):
         """ Each Firm defines its target production goal"""
@@ -154,8 +164,6 @@ class World:
                 hiring_firm.hire(pop_level, wage, 1)
                 # Log that in the Pop
                 self.pops[hired_pop].hired_by(hiring_id_firm, 1)
-                # One cleared !
-                target_demand[hiring_id_firm] -= 1
 
             if action == "poach":
                 id_firm_to_poach, poached_bonus = parameters
@@ -169,8 +177,6 @@ class World:
                 self.pops[hired_pop].poached_by_from(hiring_id_firm, id_firm_to_poach, 1)
                 # Poached firm let the worker flee
                 firm_to_poach.adjust_workers_for(pop_level, -1)
-                # One cleared !
-                target_demand[hiring_id_firm] -= 1
 
     def adjust_all_supply(self):
         for firm in self.firms.values():
@@ -264,16 +270,13 @@ class World:
                     if discount != 1:
                         break
 
-
         self.tot_supply = tot_supply
 
     def update_firms_profits(self):
         for firm in self.firms.values():
-            firm.update_profits(self.tot_demand, self.tot_supply, self.prices)
+            firm.update_profits()
 
     def tick(self, t: int):
-        # Compute useful aggregate(s)
-        self.compute_aggregates()
 
         # Core mechanisms
 
@@ -292,12 +295,18 @@ class World:
         # Technical logistics
         self.add_to_history()
 
+        # Compute useful aggregate(s)
+        self.compute_aggregates()
+
+        # Temporary logistics
+        self.reset_consumption()
+
     def export(self):
         def flatten_dict(prefix, a_dict):
             return {f"{prefix}_{key}": value for key, value in a_dict.items()}
 
-        to_display = {'tot_population', 'unemployment_rate',
-         'gdp', 'gdp_per_capita', 'price_level', 'indexed_price_level', 'inflation', 'adjusted_gdp'}
+        to_display = {'tot_population', 'unemployment_rate', 'gdp', 'gdp_per_capita', 'price_level',
+                      'indexed_price_level', 'inflation', 'adjusted_gdp'}
         full_table = []
         for i in range(0, len(self.history)):
             at_i = self.history[i]
@@ -316,9 +325,9 @@ class World:
 
             for id_pop, pop in self.pops.items():
                 pop_name = f"pop{id_pop}"
-                for key in {'pop_type', 'population', 'income', 'savings', 'thrift'}:
+                for key in {'pop_type', 'population', 'available_income', 'savings', 'thrift'}:
                     d[f"{pop_name}_{key}"] = pop.get_from_history(key, i)
-                d.update(flatten_dict(f"{pop_name}_demand", pop.get_from_history('demand', i)))
+                d.update(flatten_dict(f"{pop_name}_consumption", pop.get_from_history('consumption', i)))
 
             full_table.append(d)
 
