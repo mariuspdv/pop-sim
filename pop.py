@@ -52,6 +52,10 @@ class Pop(Historizor):
         self.income = income_from_work + income_from_shares
         self.available_income = self.income
 
+    def save(self):
+        self.savings += self.income * self.thrift
+        self.income *= (1 - self.thrift)
+
     def compute_demand(self, prices):
         """finds maximal demand within the bounds of income"""
 

@@ -4,13 +4,7 @@ import random
 
 
 class World:
-    PRICE_INC = 0.0001
-    EPS = 0.001
-    PRICE_CHANGE_CEILING = 1.2
-    PRICE_CHANGE_FLOOR = 0.8
-    WAGE_RISE = 5
-    WAGE_DECAY = 0.01
-    TO_HISTORIZE = {'tot_demand', 'tot_supply', 'tot_population', 'unemployment_rate', 'gdp', 'gdp_per_capita',
+    TO_HISTORIZE = {'tot_population', 'unemployment_rate', 'gdp', 'gdp_per_capita',
                     'price_level', 'indexed_price_level', 'inflation', 'adjusted_gdp'}
 
     def __init__(self, goods, firms, pops, depositary):
@@ -26,8 +20,6 @@ class World:
         self.depositary = depositary
 
         # Computed aggregates
-        self.tot_demand = {}
-        self.tot_supply = {}
         self.tot_population = 0
         self.unemployment_rate = 0
         self.gdp = 0
@@ -61,6 +53,8 @@ class World:
         """ Compute a percentage of unemployment (0-100)"""
         employed = 0
         for pop in self.pops.values():
+            if pop.pop_type == 3:
+                employed += pop.population
             employed += sum(pop.employed.values())
         self.unemployment_rate = (1 - (employed / self.tot_population)) * 100
 
@@ -178,17 +172,9 @@ class World:
                 # Poached firm let the worker flee
                 firm_to_poach.adjust_workers_for(pop_level, -1)
 
-    def adjust_all_supply(self):
-        for firm in self.firms.values():
-            firm.adjust_supply()
-
     def pay_salaries_and_dividends(self):
         dividends = {id_pop: 0 for id_pop, pop in self.pops.items()}
         for id_firm, firm in self.firms.items():
-            """
-            if firm.profits > 0 and firm.account >= (firm.profits * (1 - firm.SAVINGS_RATE)):
-                tot_dividends = firm.profits * (1 - firm.SAVINGS_RATE)
-            """
             tot_dividends = firm.dividends
             if tot_dividends > 0:
                 all_shares = sum(self.depositary[id_firm].values())
@@ -233,9 +219,7 @@ class World:
         for level in range(3):
             if level == 1:
                 for id_pop, pop in self.pops.items():
-                    # TODO mettre un méthode "mettre de coté" dans Pop
-                    pop.savings += pop.income * pop.thrift
-                    pop.income *= (1 - pop.thrift)
+                    pop.save()
 
             level_demand = market_queue(level)
             broke_pops = set()
@@ -269,8 +253,6 @@ class World:
 
                     if discount != 1:
                         break
-
-        self.tot_supply = tot_supply
 
     def update_firms_profits(self):
         for firm in self.firms.values():
@@ -312,8 +294,8 @@ class World:
             at_i = self.history[i]
             d = {'t': i}
             d.update({k: at_i[k] for k in to_display})
-            #d.update(flatten_dict('supply', at_i['tot_supply']))
-            #d.update(flatten_dict('demand', at_i['tot_demand']))
+            # d.update(flatten_dict('supply', at_i['tot_supply']))
+            # d.update(flatten_dict('demand', at_i['tot_demand']))
 
             for id_firm, firm in self.firms.items():
                 firm_name = f"firm{id_firm}"
@@ -332,37 +314,3 @@ class World:
             full_table.append(d)
 
         return full_table
-
-    def summary(self):
-        def price_of(firm_or_product):
-            if firm_or_product in self.prices:
-                return self.prices[firm_or_product]
-            elif firm_or_product in self.firms:
-                return self.prices[self.firms[firm_or_product].product]
-
-        for id_firm, firm in self.firms.items():
-            p = []
-            w = []
-            wage = []
-            s = []
-            t = []
-            for i in range(0, len(self.history)):
-                p.append(round(firm.get_from_history("profits", i), 2))
-                w.append(round(firm.get_from_history("workers", i)[0], 2))
-                wage.append(round(firm.get_from_history("wages", i)[0], 2))
-                s.append(round(firm.get_from_history("supply", i), 2))
-                t.append((firm.get_from_history("workers", i), firm.get_from_history("supply", i),
-                          round(firm.get_from_history("profits", i), 2)))
-            print(f'Profits of {firm.product}: {p};'
-                  f'total profits: {round(sum(p), 2)}')
-            print(f'Supply of {firm.product}: {s};')
-            print(f'Price of {firm.product}: {price_of(id_firm)};')
-            print(f'Workers of {firm.product}: {w}; max: {max(w)}; min: {min(w)}')
-            print(f'Wages of {firm.product}: {wage}')
-            print(f'{t}')
-            print(f'')
-
-        for pop in self.pops.values():
-            print(pop.employed)
-            print(pop.income)
-

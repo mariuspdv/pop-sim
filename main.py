@@ -73,5 +73,4 @@ for i in range(100):
 full_table = world.export()
 
 write_to_csv('export_run.csv', full_table)
-#nice_print(full_table)
-#world.summary()
+# nice_print(full_table)

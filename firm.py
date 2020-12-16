@@ -121,6 +121,7 @@ class Firm(Historizor):
         return lab_demand
 
     def set_white_labor_demand(self, pops):
+        # TODO revoir cette fonction pour éviter croissance des salaires abusive
         ideal_demand = self.workers[0] * (self.WHITE_RATIO / (1 - self.WHITE_RATIO))
         while ideal_demand < self.workers[1]:
             # Fire a random worker from a POP
