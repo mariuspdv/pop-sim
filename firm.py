@@ -95,7 +95,8 @@ class Firm(Historizor):
 
         if self.profits < 0:
             self.supply_goal = production * (1 - self.SUPPLY_CHANGE)
-            self.price *= 0.95
+            unit_cost = costs / self.supply_goal if self.supply_goal != 0 else 0
+            self.price = max(unit_cost, self.price * 0.95)
             return
 
     def set_blue_labor_demand(self, pops):
