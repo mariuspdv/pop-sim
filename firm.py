@@ -26,12 +26,16 @@ class Firm(Historizor):
         self.productivity = productivity
         self.supply_goal = blue_workers * productivity
         self.supply = 0
+        self.revenue = 0
         self.profits = profits
         self.account = account
         self.dividends = 0
         self._world = None
         self.sold = 0
         self.stock = stock
+        self.target_margin = 0.20
+        self.price = (sum(self.wages[i] * self.workers[i] for i in range(2))) \
+                     / (self.workers_for(0) * self.adjusted_productivity()) * (1 + self.target_margin)
 
     def __str__(self):
         return f'Employees: {self.workers}'
@@ -58,27 +62,56 @@ class Firm(Historizor):
         self.set_wages_of(pop_level, average_wage)
 
     def set_supply(self):
-        """Updates the supply of one firm, given previous profits"""
+        """Updates the supply of one firm, given previous profits
         prev_profit = self.get_from_history('profits', -2, 0) if len(self.history) > 1 else 0
         if self.profits > prev_profit and self.profits > 0:
             self.supply_goal *= (1 + self.SUPPLY_CHANGE)
         elif self.profits < prev_profit or self.profits < 0:
             self.supply_goal *= (1 - self.SUPPLY_CHANGE)
         return {self.product: self.supply_goal}
+        """
+        # prev_profit = self.get_from_history('profits', -2, 0) if len(self.history) > 1 else 0
+        production = self.workers_for(0) * self.adjusted_productivity()
+        costs = sum(self.wages[i] * self.workers[i] for i in range(2))
+        if self.stock == 0 and self.profits >= 0:
+            self.supply_goal = production * (1 + self.SUPPLY_CHANGE)
+            unit_cost = costs / self.supply_goal if self.supply_goal != 0 else 0
+            if self.price < (unit_cost * (1 + self.target_margin)):
+                self.price *= 1.05
+            return
+
+        if self.stock == 0 and self.profits < 0:
+            unit_cost = costs / production if self.supply_goal != 0 else 0
+            self.supply_goal = production
+            self.price = max(unit_cost, self.price * 1.10)
+            return
+
+        if self.profits >= 0:
+            self.supply_goal = production
+            unit_cost = costs / self.supply_goal if self.supply_goal != 0 else 0
+            if self.price < (unit_cost * (1 + self.target_margin)):
+                self.price *= 1.05
+            return
+
+        if self.profits < 0:
+            self.supply_goal = production * (1 - self.SUPPLY_CHANGE)
+            unit_cost = costs / self.supply_goal if self.supply_goal != 0 else 0
+            self.price = max(unit_cost, self.price * 0.95)
+            return
 
     def set_blue_labor_demand(self, pops):
-        max_supply = self.workers[0] * self.productivity
-        lab_demand = self.workers[0]
+        productivity = self.adjusted_productivity()
+        max_supply = self.workers_for(0) * productivity
         if self.supply_goal > max_supply:
-            lab_demand = math.ceil(self.supply_goal / self.productivity)
-        # Firm fires if under 90% production capacity and no savings, as long as firing still leaves desired
+            lab_demand = math.ceil(self.supply_goal / productivity)
+        # Firm fires if under production capacity and no savings, as long as firing still leaves desired
         # output possible and at least 1 worker (no dying firm yet).
-        elif self.supply_goal <= self.THROUGHPUT_FLOOR * max_supply and self.workers[0] > 1 and self.account <= 0:
-            lab_demand -= 1
-            if self.supply_goal > lab_demand * self.productivity:
-                lab_demand = self.workers[0]
+        elif self.supply_goal < max_supply and self.workers_for(0) > 1 and self.account <= 0:
+            lab_demand = math.ceil(self.supply_goal / productivity)
+        else:
+            lab_demand = self.workers_for(0)
 
-        while lab_demand < self.workers[0]:
+        while self.workers_for(0) > lab_demand:
             # Fire a random worker from a POP
             workers = {id_pop: pop.employed_by(self.id_firm) for id_pop, pop in pops.items() if pop.pop_type == 0}
             [fired] = random.choices(list(workers.keys()), weights=workers.values(), k=1)
@@ -88,6 +121,7 @@ class Firm(Historizor):
         return lab_demand
 
     def set_white_labor_demand(self, pops):
+        # TODO revoir cette fonction pour éviter croissance des salaires abusive
         ideal_demand = self.workers[0] * (self.WHITE_RATIO / (1 - self.WHITE_RATIO))
         while ideal_demand < self.workers[1]:
             # Fire a random worker from a POP
@@ -130,59 +164,41 @@ class Firm(Historizor):
         # Poach the worker by offering a bonus to his/her current salary
         return "poach", (id_firm_to_poach, self.POACHED_BONUS)
 
-    def max_wage(self, employees, price, pop_level):
-        def revenue():
-            if pop_level == 0:
-                return min(self.supply_goal, employees * self.productivity) * self.productivity_for(self.workers[1]) * price
-            elif pop_level == 1:
-                return min(self.supply_goal, self.workers[0] * self.productivity) * self.productivity_for(employees) * price
-
-        def costs():
-            cost = 0
-            for i in range(2):
-                if i == pop_level:
-                    cost += (employees - 1) * self.wages[pop_level]
-                else:
-                    cost += self.workers[i] * self.wages[i]
-            return cost
-
-        if self.profits < 0:
-            return self.wages[pop_level]
-        else:
-            wage_cap = revenue() - costs() - self.profits
-            return min(self.wages[pop_level] * self.WAGE_HIKE, wage_cap)
-
-    def productivity_for(self, white_workers):
-        ratio = white_workers / (white_workers + self.workers[0]) if white_workers != 0 else 0
-
+    def adjusted_productivity(self):
         def productivity_boost(x):
             if x < self.WHITE_RATIO:
                 return math.log(1 + 4 * x - 10 * x**2)
-            else:
-                return math.log(1 + 4 * self.WHITE_RATIO - 10 * self.WHITE_RATIO**2)
+            return math.log(1 + 4 * self.WHITE_RATIO - 10 * self.WHITE_RATIO**2)
 
-        return 1 + productivity_boost(ratio)
+        white_workers = self.workers_for(1)
+        ratio = white_workers / (white_workers + self.workers_for(0)) if white_workers != 0 else 0
+        return (1 + productivity_boost(ratio)) * self.productivity
 
     def wage_turnover(self):
         for id_wage in self.wages:
             self.wages[id_wage] *= (1 - self.WAGE_LOSS)
 
-    def adjust_supply(self):
-        # Capping supply
-        self.supply_goal = max(min(self.supply_goal, (self.workers[0] * self.productivity)), 0)
-        # Adjusting to productivity
-        self.supply = self.supply_goal * self.productivity_for(self.workers[1])
+    def market_supply(self):
+        self.revenue = 0
+        self.sold = 0
+        self.stock += self.workers_for(0) * self.adjusted_productivity()
+        return self.stock, self.price
+
+    def has_stock(self):
+        return self.stock > 0
 
     def raise_wages(self, rate, pop_level):
         self.wages[pop_level] *= (1 + (rate/100))
 
-    def update_profits(self, demand, supply, prices):
+    def sell_goods(self, qty):
+        self.stock -= qty
+        self.sold += qty
+        self.revenue += self.price * qty
+
+    def update_profits(self):
         """changes the firm's state using sales data"""
-        self.sold = demand[self.product] * (self.supply / supply[self.product])
-        self.stock += self.supply - self.sold
         costs = sum(self.wages[i] * self.workers[i] for i in range(2))
-        revenues = self.sold * prices[self.product]
-        self.profits = revenues - costs
+        self.profits = self.revenue - costs
         # If no debt and profits, then save some. If in debt or losses, all profits/losses in account.
         if self.profits > 0 and self.account >= 0:
             to_keep = self.SAVINGS_RATE * self.profits

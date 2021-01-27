@@ -4,16 +4,10 @@ import random
 
 
 class World:
-    PRICE_INC = 0.0001
-    EPS = 0.001
-    PRICE_CHANGE_CEILING = 1.2
-    PRICE_CHANGE_FLOOR = 0.8
-    WAGE_RISE = 5
-    WAGE_DECAY = 0.01
-    TO_HISTORIZE = {'tot_demand', 'tot_supply', 'tot_population', 'prices', 'unemployment_rate',
-                    'gdp', 'gdp_per_capita', 'price_level', 'indexed_price_level', 'inflation', 'adjusted_gdp'}
+    TO_HISTORIZE = {'tot_population', 'unemployment_rate', 'gdp', 'gdp_per_capita',
+                    'price_level', 'indexed_price_level', 'inflation', 'adjusted_gdp'}
 
-    def __init__(self, goods, firms, pops, prices, depositary):
+    def __init__(self, goods, firms, pops, depositary):
         # Core properties
         self.goods = set(goods)
         self.firms = {firm.id_firm: firm for firm in firms}
@@ -23,20 +17,14 @@ class World:
         for pop in self.pops.values():
             pop.set_world(self)
 
-        self.prices = prices
         self.depositary = depositary
 
-        # Check consistency between prices and goods
-        if not (set(prices) <= goods):
-            raise KeyError()
-
         # Computed aggregates
-        self.tot_demand = {}
-        self.tot_supply = {}
         self.tot_population = 0
         self.unemployment_rate = 0
         self.gdp = 0
         self.gdp_per_capita = 0
+        self.average_price = {good: 0 for good in self.goods}
         self.price_level = None
         self.adjusted_gdp = 0
         self.initial_price_level = None
@@ -65,12 +53,14 @@ class World:
         """ Compute a percentage of unemployment (0-100)"""
         employed = 0
         for pop in self.pops.values():
+            if pop.pop_type == 3:
+                employed += pop.population
             employed += sum(pop.employed.values())
         self.unemployment_rate = (1 - (employed / self.tot_population)) * 100
 
     def compute_gdp(self):
         """ Compute the total value of demanded good"""
-        self.gdp = sum(qty * self.prices[good] for good, qty in self.tot_demand.items())
+        self.gdp = sum([(firm.sold * firm.price) for firm in self.firms.values()])
 
     def compute_gdp_per_capita(self):
         """ GDP per person"""
@@ -92,7 +82,17 @@ class World:
                         survival_goods[good] += qty * pop.population
                     else:
                         survival_goods[good] = qty * pop.population
-        self.price_level = sum(qty * self.prices[good] for good, qty in survival_goods.items()) / self.tot_population
+
+        prices = {good: [] for good in self.goods}
+        for firm in self.firms.values():
+            prices[firm.product].append((firm.sold, firm.price))
+        for good in self.goods:
+            good_gdp = sum([qty * price for qty, price in prices[good]])
+            good_sold = sum([qty for qty, price in prices[good]])
+            if good_sold != 0:
+                self.average_price[good] = good_gdp / good_sold
+
+        self.price_level = sum(qty * self.average_price[good] for good, qty in survival_goods.items()) / self.tot_population
         if self.initial_price_level is None:
             self.initial_price_level = self.price_level
         self.indexed_price_level = self.price_level / self.initial_price_level * 100
@@ -111,6 +111,10 @@ class World:
         self.compute_gdp_per_capita()
         self.compute_price_level()
         self.compute_adjusted_gdp()
+
+    def reset_consumption(self):
+        for pop in self.pops.values():
+            pop.consumption = GoodsVector(self.goods)
 
     def set_goods_supply(self):
         """ Each Firm defines its target production goal"""
@@ -154,8 +158,6 @@ class World:
                 hiring_firm.hire(pop_level, wage, 1)
                 # Log that in the Pop
                 self.pops[hired_pop].hired_by(hiring_id_firm, 1)
-                # One cleared !
-                target_demand[hiring_id_firm] -= 1
 
             if action == "poach":
                 id_firm_to_poach, poached_bonus = parameters
@@ -169,20 +171,10 @@ class World:
                 self.pops[hired_pop].poached_by_from(hiring_id_firm, id_firm_to_poach, 1)
                 # Poached firm let the worker flee
                 firm_to_poach.adjust_workers_for(pop_level, -1)
-                # One cleared !
-                target_demand[hiring_id_firm] -= 1
-
-    def adjust_all_supply(self):
-        for firm in self.firms.values():
-            firm.adjust_supply()
 
     def pay_salaries_and_dividends(self):
         dividends = {id_pop: 0 for id_pop, pop in self.pops.items()}
         for id_firm, firm in self.firms.items():
-            """
-            if firm.profits > 0 and firm.account >= (firm.profits * (1 - firm.SAVINGS_RATE)):
-                tot_dividends = firm.profits * (1 - firm.SAVINGS_RATE)
-            """
             tot_dividends = firm.dividends
             if tot_dividends > 0:
                 all_shares = sum(self.depositary[id_firm].values())
@@ -199,70 +191,74 @@ class World:
            with price floors and ceilings to limit changes."""
 
         def aggregate_supply():
-            supply = GoodsVector(self.goods)
-            for firm in self.firms.values():
-                supply += {firm.product: firm.supply}
+            supply = {good: {} for good in self.goods}
+            for id_firm, firm in self.firms.items():
+                qty, price = firm.market_supply()
+                supply[firm.product][id_firm]= price
             return supply
 
-        def aggregate_demand(prices):
-            demand = GoodsVector(self.goods)
-            for pop in self.pops.values():
-                demand += pop.compute_demand(prices)
-            return demand
+        def market_queue(level):
+            queue = []
+            for id_pop, pop in self.pops.items():
+                if pop.income > 0:
+                    for need in pop.needs:
+                        good, l, qty = need
+                        if l == level:
+                            q, r = divmod(qty * pop.population, 0.5)
+                            for x in range(int(q)):
+                                queue.append((id_pop, good, 0.5))
+                            if r != 0:
+                                queue.append((id_pop, good, r))
 
-        def set_demand(prices):
-            for pop in self.pops.values():
-                pop.buy_goods(prices)
-
-        def cap_demand(demand, supply):
-            for good, qty in demand.items():
-                if qty > supply[good]:
-                    demand[good] = supply[good]
-
-        # Limit price changes in one tick to a range between PRICE_CHANGE_FLOOR and CEILING
-        max_prices = {good: price * self.PRICE_CHANGE_CEILING for good, price in self.prices.items()}
-        min_prices = {good: price * self.PRICE_CHANGE_FLOOR for good, price in self.prices.items()}
+            random.shuffle(queue)
+            return queue
 
         # Compute the aggregated supply of goods over all the firms
         tot_supply = aggregate_supply()
 
-        # Compute the aggregated demand over all the pops, given a set of prices and incomes
-        tot_demand = aggregate_demand(self.prices)
+        for level in range(3):
+            if level == 1:
+                for id_pop, pop in self.pops.items():
+                    pop.save()
 
-        # Main loop logic :
-        #   Adjust iteratively goods' prices then adjust demand accordingly until all
-        #   goods' demands and supplies are equal or until prices are at their limits
-
-        loop = True
-        while loop:
-            loop = False
-            for good in self.goods:
-                # Because prices change by a discrete increment, mathematical equality cannot be reached
-                # We tolerate a difference of a small number EPS
-                if abs(tot_demand[good] - tot_supply[good]) <= self.EPS:
+            level_demand = market_queue(level)
+            broke_pops = set()
+            sold_out_goods = set()
+            for id_pop, good, qty in level_demand:
+                if id_pop in broke_pops or good in sold_out_goods:
                     continue
-                if tot_demand[good] > tot_supply[good] and self.prices[good] < max_prices[good]:
-                    self.prices[good] += self.PRICE_INC
-                    loop = True
-                elif tot_demand[good] < tot_supply[good] and self.prices[good] > min_prices[good]:
-                    self.prices[good] -= self.PRICE_INC
-                    loop = True
+                pop = self.pops[id_pop]
+                while qty != 0:
+                    if level != 0 and pop.income == 0:
+                        broke_pops.add(id_pop)
+                        break
 
-            # Adjust the new demand given the new set of prices, over all the pops
-            tot_demand = aggregate_demand(self.prices)
-            cap_demand(tot_demand, tot_supply)
+                    # choose a seller in tot_supply
+                    firm_pool = [id_firm for id_firm in tot_supply[good] if self.firms[id_firm].has_stock()]
+                    if len(firm_pool) == 0:
+                        sold_out_goods.add(good)
+                        break
+                    elif len(firm_pool) == 1:
+                        [id_f] = firm_pool
+                    else:
+                        prices_pool = [1 / (p ** 2) for id_firm, p in tot_supply[good].items()
+                                       if self.firms[id_firm].has_stock()]
+                        [id_f] = random.choices(firm_pool, weights=prices_pool, k=1)
 
-        set_demand(self.prices)
-        self.tot_demand = tot_demand
-        self.tot_supply = tot_supply
+                    selling_firm = self.firms[id_f]
+                    sold = min(selling_firm.stock, qty)
+                    discount = pop.buy_good(good, level, sold, selling_firm.price)
+                    qty -= sold * discount
+                    selling_firm.sell_goods(sold * discount)
+
+                    if discount != 1:
+                        break
 
     def update_firms_profits(self):
         for firm in self.firms.values():
-            firm.update_profits(self.tot_demand, self.tot_supply, self.prices)
+            firm.update_profits()
 
     def tick(self, t: int):
-        # Compute useful aggregate(s)
-        self.compute_aggregates()
 
         # Core mechanisms
 
@@ -273,7 +269,7 @@ class World:
         # Labor market clearing for WhiteCollars
         self.clear_labor_market_for(1)
 
-        self.adjust_all_supply()
+        # self.adjust_all_supply()
         self.pay_salaries_and_dividends()
         self.clear_goods_market()
         self.update_firms_profits()
@@ -281,23 +277,29 @@ class World:
         # Technical logistics
         self.add_to_history()
 
+        # Compute useful aggregate(s)
+        self.compute_aggregates()
+
+        # Temporary logistics
+        self.reset_consumption()
+
     def export(self):
         def flatten_dict(prefix, a_dict):
             return {f"{prefix}_{key}": value for key, value in a_dict.items()}
 
-        to_display = {'tot_population', 'unemployment_rate',
-         'gdp', 'gdp_per_capita', 'price_level', 'indexed_price_level', 'inflation', 'adjusted_gdp'}
+        to_display = {'tot_population', 'unemployment_rate', 'gdp', 'gdp_per_capita', 'price_level',
+                      'indexed_price_level', 'inflation', 'adjusted_gdp'}
         full_table = []
         for i in range(0, len(self.history)):
             at_i = self.history[i]
             d = {'t': i}
             d.update({k: at_i[k] for k in to_display})
-            d.update(flatten_dict('supply', at_i['tot_supply']))
-            d.update(flatten_dict('demand', at_i['tot_demand']))
+            # d.update(flatten_dict('supply', at_i['tot_supply']))
+            # d.update(flatten_dict('demand', at_i['tot_demand']))
 
             for id_firm, firm in self.firms.items():
                 firm_name = f"firm{id_firm}"
-                for key in {'profits', 'product', 'supply', 'sold', 'stock', 'productivity', 'account'}:
+                for key in {'profits', 'product', 'sold', 'stock', 'price', 'productivity', 'account'}:
                     d[f"{firm_name}_{key}"] = firm.get_from_history(key, i)
                 for pop_level in range(2):
                     d[f"{firm_name}_workers_{pop_level}"] = firm.get_from_history('workers', i)[pop_level]
@@ -305,44 +307,10 @@ class World:
 
             for id_pop, pop in self.pops.items():
                 pop_name = f"pop{id_pop}"
-                for key in {'pop_type', 'population', 'income', 'savings', 'thrift'}:
+                for key in {'pop_type', 'population', 'available_income', 'savings', 'thrift'}:
                     d[f"{pop_name}_{key}"] = pop.get_from_history(key, i)
-                d.update(flatten_dict(f"{pop_name}_demand", pop.get_from_history('demand', i)))
+                d.update(flatten_dict(f"{pop_name}_consumption", pop.get_from_history('consumption', i)))
 
             full_table.append(d)
 
         return full_table
-
-    def summary(self):
-        def price_of(firm_or_product):
-            if firm_or_product in self.prices:
-                return self.prices[firm_or_product]
-            elif firm_or_product in self.firms:
-                return self.prices[self.firms[firm_or_product].product]
-
-        for id_firm, firm in self.firms.items():
-            p = []
-            w = []
-            wage = []
-            s = []
-            t = []
-            for i in range(0, len(self.history)):
-                p.append(round(firm.get_from_history("profits", i), 2))
-                w.append(round(firm.get_from_history("workers", i)[0], 2))
-                wage.append(round(firm.get_from_history("wages", i)[0], 2))
-                s.append(round(firm.get_from_history("supply", i), 2))
-                t.append((firm.get_from_history("workers", i), firm.get_from_history("supply", i),
-                          round(firm.get_from_history("profits", i), 2)))
-            print(f'Profits of {firm.product}: {p};'
-                  f'total profits: {round(sum(p), 2)}')
-            print(f'Supply of {firm.product}: {s};')
-            print(f'Price of {firm.product}: {price_of(id_firm)};')
-            print(f'Workers of {firm.product}: {w}; max: {max(w)}; min: {min(w)}')
-            print(f'Wages of {firm.product}: {wage}')
-            print(f'{t}')
-            print(f'')
-
-        for pop in self.pops.values():
-            print(pop.employed)
-            print(pop.income)
-
