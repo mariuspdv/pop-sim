@@ -68,7 +68,7 @@ world = World(goods=goods,
 
 
 for i in range(100):
-    world.tick(i)
+    world.tick()
 
 full_table = world.export()
 

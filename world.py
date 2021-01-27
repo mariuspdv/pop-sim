@@ -258,7 +258,7 @@ class World:
         for firm in self.firms.values():
             firm.update_profits()
 
-    def tick(self, t: int):
+    def tick(self):
 
         # Core mechanisms
 
@@ -294,8 +294,6 @@ class World:
             at_i = self.history[i]
             d = {'t': i}
             d.update({k: at_i[k] for k in to_display})
-            # d.update(flatten_dict('supply', at_i['tot_supply']))
-            # d.update(flatten_dict('demand', at_i['tot_demand']))
 
             for id_firm, firm in self.firms.items():
                 firm_name = f"firm{id_firm}"

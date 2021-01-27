@@ -6,9 +6,6 @@ import math
 
 class Firm(Historizor):
 
-    THROUGHPUT_FLOOR = 0.9
-    WAGE_HIKE = 1.15
-    WAGE_LOSS = 0.01
     SUPPLY_CHANGE = 0.05
     WHITE_RATIO = 0.15
     SAVINGS_RATE = 0.5
@@ -62,13 +59,7 @@ class Firm(Historizor):
         self.set_wages_of(pop_level, average_wage)
 
     def set_supply(self):
-        """Updates the supply of one firm, given previous profits
-        prev_profit = self.get_from_history('profits', -2, 0) if len(self.history) > 1 else 0
-        if self.profits > prev_profit and self.profits > 0:
-            self.supply_goal *= (1 + self.SUPPLY_CHANGE)
-        elif self.profits < prev_profit or self.profits < 0:
-            self.supply_goal *= (1 - self.SUPPLY_CHANGE)
-        return {self.product: self.supply_goal}
+        """
         """
         # prev_profit = self.get_from_history('profits', -2, 0) if len(self.history) > 1 else 0
         production = self.workers_for(0) * self.adjusted_productivity()
