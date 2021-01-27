@@ -59,11 +59,16 @@ class Firm(Historizor):
         self.set_wages_of(pop_level, average_wage)
 
     def set_supply(self):
-        """
-        """
-        # prev_profit = self.get_from_history('profits', -2, 0) if len(self.history) > 1 else 0
+        """ Firm chooses supply and price depending on its previous profits, stock and margin """
+        #TODO: revoir cette fonction
+
+        # just in case: prev_profit = self.get_from_history('profits', -2, 0) if len(self.history) > 1 else 0
+
+        # Compute basic values, before hiring
         production = self.workers_for(0) * self.adjusted_productivity()
         costs = sum(self.wages[i] * self.workers[i] for i in range(2))
+
+        # If sell-out and profits, increase production and, if prices too low, prices too
         if self.stock == 0 and self.profits >= 0:
             self.supply_goal = production * (1 + self.SUPPLY_CHANGE)
             unit_cost = costs / self.supply_goal if self.supply_goal != 0 else 0
@@ -71,12 +76,14 @@ class Firm(Historizor):
                 self.price *= 1.05
             return
 
+        # If sell-out and losses, increase prices
         if self.stock == 0 and self.profits < 0:
             unit_cost = costs / production if self.supply_goal != 0 else 0
             self.supply_goal = production
             self.price = max(unit_cost, self.price * 1.10)
             return
 
+        # If stock still there and profits, do nothing (but increase prices if need be) ???? Need to change
         if self.profits >= 0:
             self.supply_goal = production
             unit_cost = costs / self.supply_goal if self.supply_goal != 0 else 0
@@ -84,6 +91,7 @@ class Firm(Historizor):
                 self.price *= 1.05
             return
 
+        # If losses and stock left, decrease supply and price if possible --> needs a rethink
         if self.profits < 0:
             self.supply_goal = production * (1 - self.SUPPLY_CHANGE)
             unit_cost = costs / self.supply_goal if self.supply_goal != 0 else 0
@@ -112,7 +120,7 @@ class Firm(Historizor):
         return lab_demand
 
     def set_white_labor_demand(self, pops):
-        # TODO revoir cette fonction pour éviter croissance des salaires abusive
+        # TODO revoir cette fonction (pour éviter croissance des salaires abusive?)
         ideal_demand = self.workers[0] * (self.WHITE_RATIO / (1 - self.WHITE_RATIO))
         while ideal_demand < self.workers[1]:
             # Fire a random worker from a POP

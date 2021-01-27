@@ -57,7 +57,11 @@ class Pop(Historizor):
         self.income *= (1 - self.thrift)
 
     def buy_good(self, good, level, qty, price):
+        """ Takes care of the transaction on the buyer's side, changing income and consumption """
+
+        # If lack of money, compute the proportion of the increment bought...
         if self.income < (price * qty):
+            # ... except if basic need and savings sufficient, in which case use savings
             if level == 0:
                 if self.savings > ((price * qty) - self.income):
                     self.savings -= (price * qty) - self.income
