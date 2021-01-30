@@ -52,10 +52,16 @@ employ_1 = {1: 9, 2: 6, 3: 3, 4: 7, 5: 0}
 employ_2 = {1: 0, 2: 3, 3: 7, 4: 0, 5: 2}
 employ_3 = {1: 0, 2: 1, 3: 0, 4: 1, 5: 0}
 employ_4 = {1: 1, 2: 1, 3: 1, 4: 0, 5: 0}
-pop_1 = BlueCollar(id_pop=1, goods=goods, needs=needs_1, population=30, employed=employ_1, savings=3)
-pop_2 = BlueCollar(id_pop=2, goods=goods, needs=needs_2, population=12, employed=employ_2, savings=1)
-pop_3 = BlueCollar(id_pop=3, goods=goods, needs=needs_3, population=3, employed=employ_3, savings=2)
-pop_4 = WhiteCollar(id_pop=4, goods=goods, needs=needs_4, population=5, employed=employ_4, savings=0)
+f = 100
+employ_1 = {k: f * v for k, v in employ_1.items()}
+employ_2 = {k: f * v for k, v in employ_2.items()}
+employ_3 = {k: f * v for k, v in employ_3.items()}
+employ_4 = {k: f * v for k, v in employ_4.items()}
+
+pop_1 = BlueCollar(id_pop=1, goods=goods, needs=needs_1, population=30 * f, employed=employ_1, savings=3)
+pop_2 = BlueCollar(id_pop=2, goods=goods, needs=needs_2, population=12 *f, employed=employ_2, savings=1)
+pop_3 = BlueCollar(id_pop=3, goods=goods, needs=needs_3, population=3 * f, employed=employ_3, savings=2)
+pop_4 = WhiteCollar(id_pop=4, goods=goods, needs=needs_4, population=5 * f, employed=employ_4, savings=0)
 pop_5 = Capitalist(id_pop=5, goods=goods, needs=needs_5, population=1, employed={}, savings=3)
 firms = [firm_1, firm_2, firm_3, firm_4, firm_5]
 initial_shares = {1: 0, 2: 0, 3: 0, 4: 0, 5: 10}

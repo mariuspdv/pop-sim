@@ -219,14 +219,15 @@ class World:
             """ Splits up needs of all the pops in increments, with smaller ones to fill,
                 create the queue and shuffle """
             queue = []
+            chunk = sum(pop.population for pop in self.pops.values()) / 100
             for id_pop, pop in self.pops.items():
                 if pop.income > 0:
                     for need in pop.needs:
                         good, l, qty = need
                         if l == level:
-                            q, r = divmod(qty * pop.population, 0.5)
+                            q, r = divmod(qty * pop.population, chunk)
                             for x in range(int(q)):
-                                queue.append((id_pop, good, 0.5))
+                                queue.append((id_pop, good, chunk))
                             if r != 0:
                                 queue.append((id_pop, good, r))
 
@@ -253,6 +254,8 @@ class World:
                 # Add pop to broke-pops if no more money
                 while qty != 0:
                     if level != 0 and pop.income == 0:
+                        if pop.income < 0:
+                            print("aiaiaiaiaai")
                         broke_pops.add(id_pop)
                         break
 
