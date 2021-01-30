@@ -12,10 +12,12 @@ class World:
         self.goods = set(goods)
         self.firms = {firm.id_firm: firm for firm in firms}
         self.pops = {pop.id_pop: pop for pop in pops}
-        for firm in self.firms.values():
-            firm.set_world(self)
         for pop in self.pops.values():
             pop.set_world(self)
+
+        for firm in self.firms.values():
+            firm.set_world(self)
+            firm.init_workers()
 
         self.depositary = depositary
 

@@ -33,7 +33,7 @@ class Pop(Historizor):
         return self.population - sum(v for _, v in self.employed.items())
 
     def employed_by(self, id_firm):
-        return self.employed[id_firm]
+        return self.employed.get(id_firm, 0)
 
     def fired_by(self, id_firm, employees):
         self.employed[id_firm] -= employees

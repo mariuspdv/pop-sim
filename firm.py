@@ -2,7 +2,8 @@
 from historizor import Historizor
 import random
 import math
-
+import blue_collar
+import white_collar
 
 class Firm(Historizor):
 
@@ -13,15 +14,15 @@ class Firm(Historizor):
     INCREASE_CEILING = 1.3
     UNEMP_MALUS = .95
 
-    def __init__(self, id_firm, product, blue_workers, white_workers, blue_wages, white_wages, productivity, profits=0,
+    def __init__(self, id_firm, product, blue_wages, white_wages, productivity, profits=0,
                  account=0, stock=0):
         super().__init__()
         self.id_firm = id_firm
         self.product = product
-        self.workers = {0: blue_workers, 1: white_workers}
+        self.workers = {0: 0, 1: 0}
         self.wages = {0: blue_wages, 1: white_wages}
         self.productivity = productivity
-        self.supply_goal = blue_workers * productivity
+        self.supply_goal = 0
         self.supply = 0
         self.revenue = 0
         self.profits = profits
@@ -31,14 +32,24 @@ class Firm(Historizor):
         self.sold = 0
         self.stock = stock
         self.target_margin = 0.20
-        self.price = (sum(self.wages[i] * self.workers[i] for i in range(2))) \
-                     / (self.workers_for(0) * self.adjusted_productivity()) * (1 + self.target_margin)
+        self.price = 0
 
     def __str__(self):
         return f'Employees: {self.workers}'
 
     def set_world(self, world):
         self._world = world
+
+    def init_workers(self):
+        for pop in self._world.get_pops().values():
+            workers = pop.employed_by(self.id_firm)
+            if type(pop) is blue_collar.BlueCollar:
+                self.adjust_workers_for(0, workers)
+            if type(pop) is white_collar.WhiteCollar:
+                self.adjust_workers_for(1, workers)
+        self.supply_goal = self.workers[0] * self.productivity
+        self.price = (sum(self.wages[i] * self.workers[i] for i in range(2))) \
+                     / (self.workers_for(0) * self.adjusted_productivity()) * (1 + self.target_margin)
 
     def workers_for(self, pop_level):
         return self.workers[pop_level]

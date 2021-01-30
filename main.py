@@ -28,11 +28,11 @@ def nice_print(data):
 
 
 goods = {'food', 'lodging', 'clothes', 'luxury'}
-firm_1 = Firm(id_firm=1, product='food', blue_workers=9, white_workers=1, blue_wages=1.3, white_wages=1.65, productivity=3)
-firm_2 = Firm(id_firm=2, product='lodging', blue_workers=10, white_workers=1, blue_wages=1.21, white_wages=1.55, productivity=3)
-firm_3 = Firm(id_firm=3, product='clothes', blue_workers=10, white_workers=1, blue_wages=1.41, white_wages=1.52, productivity=2)
-firm_4 = Firm(id_firm=4, product='luxury', blue_workers=8, white_workers=0, blue_wages=1, white_wages=1.3, productivity=0.5)
-firm_5 = Firm(id_firm=5, product='food', blue_workers=2, white_workers=0, blue_wages=1.1, white_wages=1.69, productivity=3)
+firm_1 = Firm(id_firm=1, product='food', blue_wages=1.3, white_wages=1.65, productivity=3)
+firm_2 = Firm(id_firm=2, product='lodging', blue_wages=1.21, white_wages=1.55, productivity=3)
+firm_3 = Firm(id_firm=3, product='clothes', blue_wages=1.41, white_wages=1.52, productivity=2)
+firm_4 = Firm(id_firm=4, product='luxury', blue_wages=1, white_wages=1.3, productivity=0.5)
+firm_5 = Firm(id_firm=5, product='food', blue_wages=1.1, white_wages=1.69, productivity=3)
 needs_1 = [('food', 0, 0.6), ('lodging', 0, 0.5), ('clothes', 0, 0.2),
            ('food', 1, 0.2), ('lodging', 1, 0.2), ('clothes', 1, 0.6), ('luxury', 1, 0.1),
            ('luxury', 2, 10)]
@@ -65,7 +65,6 @@ world = World(goods=goods,
               pops=[pop_1, pop_2, pop_3, pop_4, pop_5],
               depositary={id_firm: initial_shares for id_firm in range(1, len(firms) + 1)}
               )
-
 
 for i in range(100):
     world.tick()
