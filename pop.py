@@ -19,7 +19,11 @@ class Pop(Historizor):
         self.demand = GoodsVector(self.goods)
         self.consumption = GoodsVector(self.goods)
         self.employed = employed
+
+        # Cash accounts
+        self.current_account = 0
         self.savings = savings
+
         self.thrift = thrift
         self._world = None
 
@@ -34,6 +38,12 @@ class Pop(Historizor):
 
     def employed_by(self, id_firm):
         return self.employed.get(id_firm, 0)
+
+    def start_period(self):
+        self.available_income = 0
+
+    def end_period(self):
+        pass
 
     def fired_by(self, id_firm, employees):
         self.employed[id_firm] -= employees
@@ -51,6 +61,16 @@ class Pop(Historizor):
         income_from_shares = dividends[self.id_pop]
         self.income = income_from_work + income_from_shares
         self.available_income = self.income
+
+    def cash_in_salary(self, salary):
+        self.income += salary
+        self.available_income += salary
+        self.current_account += salary
+
+    def cash_in_dividends(self, dividends):
+        self.income += dividends
+        self.available_income += dividends
+        self.current_account += dividends
 
     def save(self):
         self.savings += self.income * self.thrift

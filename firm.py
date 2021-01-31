@@ -23,14 +23,20 @@ class Firm(Historizor):
         self.wages = {0: blue_wages, 1: white_wages}
         self.productivity = productivity
         self.supply_goal = 0
+        self.lab_demand = {0: 0, 1: 0}
+
         self.supply = 0
         self.revenue = 0
-        self.profits = profits
+        self.sold = 0
+
+        # Accounting
+        self.profits = profits  # Shluld be called  'income' in accounting parlance
         self.account = account
         self.dividends = 0
-        self._world = None
-        self.sold = 0
+        self.capital = 0
         self.stock = stock
+
+        self._world = None
         self.target_margin = 0.20
         self.price = 0
 
@@ -47,7 +53,7 @@ class Firm(Historizor):
                 self.adjust_workers_for(0, workers)
             if type(pop) is white_collar.WhiteCollar:
                 self.adjust_workers_for(1, workers)
-        self.supply_goal = self.workers[0] * self.productivity
+        # Initialize price objective at Unit cost plus target margin
         self.price = (sum(self.wages[i] * self.workers[i] for i in range(2))) \
                      / (self.workers_for(0) * self.adjusted_productivity()) * (1 + self.target_margin)
 
@@ -63,13 +69,19 @@ class Firm(Historizor):
     def set_wages_of(self, pop_level, wage):
         self.wages[pop_level] = wage
 
+    def start_period(self):
+        pass
+
+    def end_period(self):
+        pass
+
     def hire(self, pop_level, new_wage, delta=1):
         self.workers[pop_level] += delta
         average_wage = (self.wages_of(pop_level) * (self.workers[pop_level] - delta) + new_wage * delta) \
                        / self.workers[pop_level]
         self.set_wages_of(pop_level, average_wage)
 
-    def set_supply(self):
+    def set_target_supply_and_price(self):
         """ Firm chooses supply and price depending on its previous profits, stock and margin """
         #TODO: revoir cette fonction
 
@@ -109,7 +121,7 @@ class Firm(Historizor):
             self.price = max(unit_cost, self.price * 0.95)
             return
 
-    def set_blue_labor_demand(self, pops):
+    def set_blue_labor_demand(self):
         productivity = self.adjusted_productivity()
         max_supply = self.workers_for(0) * productivity
         if self.supply_goal > max_supply:
@@ -120,38 +132,34 @@ class Firm(Historizor):
             lab_demand = math.ceil(self.supply_goal / productivity)
         else:
             lab_demand = self.workers_for(0)
+        self.lab_demand[0] = lab_demand
 
-        while self.workers_for(0) > lab_demand:
-            # Fire a random worker from a POP
-            workers = {id_pop: pop.employed_by(self.id_firm) for id_pop, pop in pops.items() if pop.pop_type == 0}
-            [fired] = random.choices(list(workers.keys()), weights=workers.values(), k=1)
-            pops[fired].fired_by(self.id_firm, 1)
-            self.workers[0] -= 1
-
-        return lab_demand
-
-    def set_white_labor_demand(self, pops):
+    def set_white_labor_demand(self):
         # TODO revoir cette fonction (pour éviter croissance des salaires abusive?)
         ideal_demand = self.workers[0] * (self.WHITE_RATIO / (1 - self.WHITE_RATIO))
-        while ideal_demand < self.workers[1]:
-            # Fire a random worker from a POP
-            workers = {id_pop: pop.employed_by(self.id_firm) for id_pop, pop in pops.items() if pop.pop_type == 1}
-            [fired] = random.choices(list(workers.keys()), weights=workers.values(), k=1)
-            pops[fired].fired_by(self.id_firm, 1)
-            self.workers[1] -= 1
-
-        return int(ideal_demand)
+        self.lab_demand[1] = int(ideal_demand)
 
     def set_labor_demand_for(self, pop_level):
-        pops = self._world.get_pops()
         if pop_level == 0:
-            return self.set_blue_labor_demand(pops)
-        return self.set_white_labor_demand(pops)
+            return self.set_blue_labor_demand()
+        return self.set_white_labor_demand()
 
-    def try_to_match_labor_demand(self, pop_level, labor_demand):
+    def get_labor_demand_for(self, pop_level):
+        return self.lab_demand[pop_level]
+
+    def fire_to_match_labor_demand_for(self, pop_level):
+        pops = self._world.get_pops()
+        while self.workers_for(pop_level) > self.lab_demand[pop_level]:
+            # Fire a random worker from a POP
+            workers = {id_pop: pop.employed_by(self.id_firm) for id_pop, pop in pops.items() if pop.pop_type == pop_level}
+            [fired] = random.choices(list(workers.keys()), weights=workers.values(), k=1)
+            pops[fired].fired_by(self.id_firm, 1)
+            self.adjust_workers_for(pop_level, -1)
+
+    def try_to_match_labor_demand(self, pop_level):
         # Each Firm will try to hire workers to match its target workforce
         # lab_demand represents the target headcount including the current employees
-
+        labor_demand = self.get_labor_demand_for(pop_level)
         # Hire one by one until target is reached
         if labor_demand <= self.workers_for(pop_level):
             return "give_up", None
@@ -184,10 +192,6 @@ class Firm(Historizor):
         ratio = white_workers / (white_workers + self.workers_for(0)) if white_workers != 0 else 0
         return (1 + productivity_boost(ratio)) * self.productivity
 
-    def wage_turnover(self):
-        for id_wage in self.wages:
-            self.wages[id_wage] *= (1 - self.WAGE_LOSS)
-
     def market_supply(self):
         self.revenue = 0
         self.sold = 0
@@ -204,6 +208,23 @@ class Firm(Historizor):
         self.stock -= qty
         self.sold += qty
         self.revenue += self.price * qty
+
+    def pay_salaries(self):
+        salaries = {}
+        for id_pop, (pop_level, workers) in self._world.get_workers_for(self.id_firm).items():
+            salary = workers * self.wages_of(pop_level)
+            # Accounting
+            self.account -= salary
+            self.profits -= salary
+            salaries[id_pop] = salary
+        return salaries
+
+    def pay_dividends(self):
+        dividends = self.dividends
+        # Accounting
+        self.dividends -= dividends
+        self.account -= dividends
+        return dividends
 
     def update_profits(self):
         """changes the firm's state using sales data"""
