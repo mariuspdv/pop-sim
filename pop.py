@@ -41,6 +41,7 @@ class Pop(Historizor):
 
     def start_period(self):
         self.available_income = 0
+        self.consumption = GoodsVector(self.goods)
 
     def end_period(self):
         pass
@@ -84,15 +85,30 @@ class Pop(Historizor):
             # ... except if basic need and savings sufficient, in which case use savings
             if level == 0:
                 if self.savings > ((price * qty) - self.income):
-                    self.savings -= (price * qty) - self.income
-                    self.income = 0
+                    from_savings = (price * qty) - self.income
+                    from_income = self.income
+                    self.income -= from_income
                     self.consumption[good] += qty
+                    # Accounting
+                    # Transfer from savings to current_account
+                    self.savings -= from_savings
+                    self.current_account += from_savings
+                    # Buy good
+                    self.current_account -= (from_savings + from_income)
                     return 1
+            # Accounting
+            amount = self.income
+            self.current_account -= amount
+            self.income -= amount
+
             discount = self.income / (price * qty)
-            self.income = 0
             self.consumption[good] += qty * discount
             return discount
 
-        self.income -= price * qty
+        # Accounting
+        amount = price * qty
+        self.current_account -= amount
+        self.income -= amount
+
         self.consumption[good] += qty
         return 1

@@ -25,7 +25,7 @@ class Firm(Historizor):
         self.supply_goal = 0
         self.lab_demand = {0: 0, 1: 0}
 
-        self.supply = 0
+        #self.supply = 0
         self.revenue = 0
         self.sold = 0
 
@@ -69,11 +69,17 @@ class Firm(Historizor):
     def set_wages_of(self, pop_level, wage):
         self.wages[pop_level] = wage
 
+    def get_price(self):
+        return self.price
+
     def start_period(self):
-        pass
+        self.revenue = 0
+        self.sold = 0
 
     def end_period(self):
-        pass
+        # Close accounting period
+        self.capital += self.profits - self.dividends
+        self.profits = 0
 
     def hire(self, pop_level, new_wage, delta=1):
         self.workers[pop_level] += delta
@@ -89,35 +95,35 @@ class Firm(Historizor):
 
         # Compute basic values, before hiring
         production = self.workers_for(0) * self.adjusted_productivity()
-        costs = sum(self.wages[i] * self.workers[i] for i in range(2))
-
+        anticipated_costs = sum(self.wages[i] * self.workers[i] for i in range(2))
+        prev_profit = self.get_from_history('profits', -1, 0)
         # If sell-out and profits, increase production and, if prices too low, prices too
-        if self.stock == 0 and self.profits >= 0:
+        if self.stock == 0 and prev_profit >= 0:
             self.supply_goal = production * (1 + self.SUPPLY_CHANGE)
-            unit_cost = costs / self.supply_goal if self.supply_goal != 0 else 0
+            unit_cost = anticipated_costs / self.supply_goal if self.supply_goal != 0 else 0
             if self.price < (unit_cost * (1 + self.target_margin)):
                 self.price *= 1.05
             return
 
         # If sell-out and losses, increase prices
-        if self.stock == 0 and self.profits < 0:
-            unit_cost = costs / production if self.supply_goal != 0 else 0
+        if self.stock == 0 and prev_profit < 0:
+            unit_cost = anticipated_costs / production if self.supply_goal != 0 else 0
             self.supply_goal = production
             self.price = max(unit_cost, self.price * 1.10)
             return
 
         # If stock still there and profits, do nothing (but increase prices if need be) ???? Need to change
-        if self.profits >= 0:
+        if prev_profit >= 0:
             self.supply_goal = production
-            unit_cost = costs / self.supply_goal if self.supply_goal != 0 else 0
+            unit_cost = anticipated_costs / self.supply_goal if self.supply_goal != 0 else 0
             if self.price < (unit_cost * (1 + self.target_margin)):
                 self.price *= 1.05
             return
 
         # If losses and stock left, decrease supply and price if possible --> needs a rethink
-        if self.profits < 0:
+        if prev_profit < 0:
             self.supply_goal = production * (1 - self.SUPPLY_CHANGE)
-            unit_cost = costs / self.supply_goal if self.supply_goal != 0 else 0
+            unit_cost = anticipated_costs / self.supply_goal if self.supply_goal != 0 else 0
             self.price = max(unit_cost, self.price * 0.95)
             return
 
@@ -192,11 +198,9 @@ class Firm(Historizor):
         ratio = white_workers / (white_workers + self.workers_for(0)) if white_workers != 0 else 0
         return (1 + productivity_boost(ratio)) * self.productivity
 
-    def market_supply(self):
-        self.revenue = 0
-        self.sold = 0
+    def produce_goods(self):
         self.stock += self.workers_for(0) * self.adjusted_productivity()
-        return self.stock, self.price
+        #return self.stock, self.price
 
     def has_stock(self):
         return self.stock > 0
@@ -205,9 +209,14 @@ class Firm(Historizor):
         self.wages[pop_level] *= (1 + (rate/100))
 
     def sell_goods(self, qty):
+        amount = self.price * qty
         self.stock -= qty
         self.sold += qty
-        self.revenue += self.price * qty
+        self.revenue += amount
+
+        # Accounting
+        self.profits += amount
+        self.account += amount
 
     def pay_salaries(self):
         salaries = {}
@@ -226,16 +235,14 @@ class Firm(Historizor):
         self.account -= dividends
         return dividends
 
-    def update_profits(self):
+    def decide_dividend_to_distribute(self):
         """changes the firm's state using sales data"""
-        costs = sum(self.wages[i] * self.workers[i] for i in range(2))
-        self.profits = self.revenue - costs
+        #costs = sum(self.wages[i] * self.workers[i] for i in range(2))
+        #self.profits = self.revenue - costs
         # If no debt and profits, then save some. If in debt or losses, all profits/losses in account.
         if self.profits > 0 and self.account >= 0:
             to_keep = self.SAVINGS_RATE * self.profits
-            to_distribute = self.profits - to_keep
-            self.account += to_keep
-            self.dividends = to_distribute
+            self.dividends = min(self.profits - to_keep, self.account)
         else:
-            self.account += self.profits
+            # self.account += self.profits
             self.dividends = 0
