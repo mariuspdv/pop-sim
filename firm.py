@@ -5,6 +5,7 @@ import math
 import blue_collar
 import white_collar
 
+
 class Firm(Historizor):
 
     SUPPLY_CHANGE = 0.05

@@ -14,16 +14,15 @@ class Pop(Historizor):
         self.needs = needs
         self._levels = sorted(list(set(l for _, l, _ in needs)))
         self.population = population
-        self.income = 0
-        self.available_income = self.income
         self.demand = GoodsVector(self.goods)
         self.consumption = GoodsVector(self.goods)
         self.employed = employed
 
         # Cash accounts
-        self.current_account = 0
+        self.income = 0
         self.savings = savings
 
+        self.available_income = self.income
         self.thrift = thrift
         self._world = None
 
@@ -66,12 +65,10 @@ class Pop(Historizor):
     def cash_in_salary(self, salary):
         self.income += salary
         self.available_income += salary
-        self.current_account += salary
 
     def cash_in_dividends(self, dividends):
         self.income += dividends
         self.available_income += dividends
-        self.current_account += dividends
 
     def save(self):
         self.savings += self.income * self.thrift
@@ -87,28 +84,20 @@ class Pop(Historizor):
                 if self.savings > ((price * qty) - self.income):
                     from_savings = (price * qty) - self.income
                     from_income = self.income
+                    self.savings -= from_savings
                     self.income -= from_income
                     self.consumption[good] += qty
-                    # Accounting
-                    # Transfer from savings to current_account
-                    self.savings -= from_savings
-                    self.current_account += from_savings
-                    # Buy good
-                    self.current_account -= (from_savings + from_income)
                     return 1
             # Accounting
-            amount = self.income
-            self.current_account -= amount
-            self.income -= amount
-
             discount = self.income / (price * qty)
+
+            amount = self.income
+            self.income -= amount
             self.consumption[good] += qty * discount
             return discount
 
         # Accounting
         amount = price * qty
-        self.current_account -= amount
         self.income -= amount
-
         self.consumption[good] += qty
         return 1
