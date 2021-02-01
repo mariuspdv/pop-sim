@@ -9,6 +9,7 @@ import white_collar
 class Firm(Historizor):
 
     SUPPLY_CHANGE = 0.05
+    PRICE_CHANGE = 0.05
     WHITE_RATIO = 0.15
     SAVINGS_RATE = 0.5
     POACHED_BONUS = 1.05
@@ -97,36 +98,39 @@ class Firm(Historizor):
         # Compute basic values, before hiring
         production = self.workers_for(0) * self.adjusted_productivity()
         anticipated_costs = sum(self.wages[i] * self.workers[i] for i in range(2))
+        unit_cost = anticipated_costs / self.supply_goal if self.supply_goal != 0 else 0
         prev_profit = self.get_from_history('profits', -1, 0)
+        prev_sold = self.get_from_history('sold', -1, 0)
         # If sell-out and profits, increase production and, if prices too low, prices too
         if self.stock == 0 and prev_profit >= 0:
             self.supply_goal = production * (1 + self.SUPPLY_CHANGE)
-            unit_cost = anticipated_costs / self.supply_goal if self.supply_goal != 0 else 0
             if self.price < (unit_cost * (1 + self.target_margin)):
-                self.price *= 1.05
+                self.price *= (1 + self.PRICE_CHANGE)
             return
 
         # If sell-out and losses, increase prices
         if self.stock == 0 and prev_profit < 0:
-            unit_cost = anticipated_costs / production if self.supply_goal != 0 else 0
             self.supply_goal = production
-            self.price = max(unit_cost, self.price * 1.10)
+            self.price = max(unit_cost, self.price * (1 + self.PRICE_CHANGE))
             return
 
         # If stock still there and profits, do nothing (but increase prices if need be) ???? Need to change
         if prev_profit >= 0:
-            self.supply_goal = production
-            unit_cost = anticipated_costs / self.supply_goal if self.supply_goal != 0 else 0
-            if self.price < (unit_cost * (1 + self.target_margin)):
-                self.price *= 1.05
+            if self.stock >= 2 * production:
+                self.supply_goal = production # * (1 - self.SUPPLY_CHANGE)  # Decrease production
+                self.price = max(unit_cost, self.price * (1 - self.PRICE_CHANGE))
+            else:
+                self.supply_goal = production
+                if self.price < (unit_cost * (1 + self.target_margin)):
+                    self.price *= (1 + self.PRICE_CHANGE)
             return
 
         # If losses and stock left, decrease supply and price if possible --> needs a rethink
         if prev_profit < 0:
             self.supply_goal = production * (1 - self.SUPPLY_CHANGE)
-            unit_cost = anticipated_costs / self.supply_goal if self.supply_goal != 0 else 0
-            self.price = max(unit_cost, self.price * 0.95)
+            self.price = max(unit_cost, self.price * (1 - self.PRICE_CHANGE))
             return
+        raise "Devrait pas arriver là"
 
     def set_blue_labor_demand(self):
         productivity = self.adjusted_productivity()

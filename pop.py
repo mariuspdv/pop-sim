@@ -32,6 +32,15 @@ class Pop(Historizor):
     def set_world(self, world):
         self._world = world
 
+    def cumulated_needs(self, levels=None):
+        cum_needs = {good: 0 for good in self.goods}
+        for good, l, qty in self.needs:
+            if levels is None:
+                cum_needs[good] += self.population * qty
+            elif l in levels:
+                cum_needs[good] += self.population * qty
+        return GoodsVector(self.goods, cum_needs)
+
     def unemployed(self):
         return self.population - sum(v for _, v in self.employed.items())
 

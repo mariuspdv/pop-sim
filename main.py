@@ -4,6 +4,7 @@ from blue_collar import BlueCollar
 from white_collar import WhiteCollar
 from capitalist import Capitalist
 from world import World
+from goodsvector import GoodsVector
 
 
 def write_to_csv(file_name, data):
@@ -52,7 +53,7 @@ employ_1 = {1: 9, 2: 6, 3: 3, 4: 7, 5: 0}
 employ_2 = {1: 0, 2: 3, 3: 7, 4: 0, 5: 2}
 employ_3 = {1: 0, 2: 1, 3: 0, 4: 1, 5: 0}
 employ_4 = {1: 1, 2: 1, 3: 1, 4: 0, 5: 0}
-f = 1
+f = 10
 employ_1 = {k: f * v for k, v in employ_1.items()}
 employ_2 = {k: f * v for k, v in employ_2.items()}
 employ_3 = {k: f * v for k, v in employ_3.items()}
@@ -72,10 +73,28 @@ world = World(goods=goods,
               depositary={id_firm: initial_shares for id_firm in range(1, len(firms) + 1)}
               )
 
-for i in range(100):
+for i in range(200):
     world.tick()
 
 full_table = world.export()
 
 write_to_csv('export_run.csv', full_table)
 # nice_print(full_table)
+
+cum_needs = GoodsVector(goods)
+for pop in world.pops.values():
+    cum_needs += pop.cumulated_needs({0, 1})
+
+prod_capacity = GoodsVector(goods)
+for firm in world.firms.values():
+    bc = firm.workers_for(0)
+    productivity = firm.adjusted_productivity()
+    good = firm.product
+    # print(firm.id_firm, bc, good, productivity, bc * productivity)
+    prod_capacity[good] += bc * productivity
+
+print('needs')
+print(cum_needs)
+print('production_capacity')
+print(prod_capacity)
+
