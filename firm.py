@@ -39,7 +39,7 @@ class Firm(Historizor):
         self.stock = stock
 
         self._world = None
-        self.target_margin = 0.20
+        self.target_margin = 0.10
         self.price = 0
 
     def __str__(self):
@@ -91,7 +91,6 @@ class Firm(Historizor):
 
     def set_target_supply_and_price(self):
         """ Firm chooses supply and price depending on its previous profits, stock and margin """
-        #TODO: revoir cette fonction
 
         # just in case: prev_profit = self.get_from_history('profits', -2, 0) if len(self.history) > 1 else 0
 
@@ -101,11 +100,14 @@ class Firm(Historizor):
         unit_cost = anticipated_costs / self.supply_goal if self.supply_goal != 0 else 0
         prev_profit = self.get_from_history('profits', -1, 0)
         prev_sold = self.get_from_history('sold', -1, 0)
+
         # If sell-out and profits, increase production and, if prices too low, prices too
         if self.stock == 0 and prev_profit >= 0:
-            self.supply_goal = production * (1 + self.SUPPLY_CHANGE)
             if self.price < (unit_cost * (1 + self.target_margin)):
                 self.price *= (1 + self.PRICE_CHANGE)
+                self.supply_goal = production
+            else:
+                self.supply_goal = production * (1 + self.SUPPLY_CHANGE)
             return
 
         # If sell-out and losses, increase prices
@@ -114,15 +116,18 @@ class Firm(Historizor):
             self.price = max(unit_cost, self.price * (1 + self.PRICE_CHANGE))
             return
 
-        # If stock still there and profits, do nothing (but increase prices if need be) ???? Need to change
+        # If stock still there and profits, see if stock decreases
         if prev_profit >= 0:
-            if self.stock >= 2 * production:
-                self.supply_goal = production # * (1 - self.SUPPLY_CHANGE)  # Decrease production
-                self.price = max(unit_cost, self.price * (1 - self.PRICE_CHANGE))
+            # If no, then drop price, and drop production if big stock
+            if prev_sold < production:
+                if self.stock >= 2 * production:
+                    self.supply_goal = production * (1 - self.SUPPLY_CHANGE)  # Decrease production
+                    self.price = self.price * (1 - self.PRICE_CHANGE)
+                else:
+                    self.supply_goal = production
+                    self.price = max(self.price * (1 + self.PRICE_CHANGE), unit_cost)
             else:
                 self.supply_goal = production
-                if self.price < (unit_cost * (1 + self.target_margin)):
-                    self.price *= (1 + self.PRICE_CHANGE)
             return
 
         # If losses and stock left, decrease supply and price if possible --> needs a rethink
@@ -130,6 +135,7 @@ class Firm(Historizor):
             self.supply_goal = production * (1 - self.SUPPLY_CHANGE)
             self.price = max(unit_cost, self.price * (1 - self.PRICE_CHANGE))
             return
+
         raise "Devrait pas arriver là"
 
     def set_blue_labor_demand(self):
