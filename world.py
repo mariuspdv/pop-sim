@@ -374,3 +374,30 @@ class World:
             full_table.append(d)
 
         return full_table
+
+    def high_level_analysis(self):
+        cum_needs = GoodsVector(self.goods)
+        cum_needs01 = GoodsVector(self.goods)
+        for pop in self.pops.values():
+            cum_needs += pop.cumulated_needs()
+            cum_needs01 += pop.cumulated_needs({0, 1})
+
+        prod_capacity = GoodsVector(self.goods)
+        for firm in self.firms.values():
+            bc = firm.workers_for(0)
+            productivity = firm.adjusted_productivity()
+            good = firm.product
+            # print(firm.id_firm, bc, good, productivity, bc * productivity)
+            prod_capacity[good] += bc * productivity
+
+        ratio_needs_prod = GoodsVector(self.goods)
+        ratio_needs_prod_01 = GoodsVector(self.goods)
+        for good in self.goods:
+            ratio_needs_prod[good] = prod_capacity[good] / cum_needs[good]
+            ratio_needs_prod_01[good] = prod_capacity[good] / cum_needs01[good]
+
+        return {'cumulated_needs_01': cum_needs01,
+                'cumulated_needs': cum_needs,
+                'production': prod_capacity,
+                'ratio_needs_prod': ratio_needs_prod,
+                'ratio_needs_prod_01': ratio_needs_prod_01}
