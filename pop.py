@@ -14,12 +14,15 @@ class Pop(Historizor):
         self.needs = needs
         self._levels = sorted(list(set(l for _, l, _ in needs)))
         self.population = population
-        self.income = 0
-        self.available_income = self.income
         self.demand = GoodsVector(self.goods)
         self.consumption = GoodsVector(self.goods)
         self.employed = employed
+
+        # Cash accounts
+        self.income = 0
         self.savings = savings
+
+        self.available_income = self.income
         self.thrift = thrift
         self._world = None
 
@@ -29,11 +32,27 @@ class Pop(Historizor):
     def set_world(self, world):
         self._world = world
 
+    def cumulated_needs(self, levels=None):
+        cum_needs = {good: 0 for good in self.goods}
+        for good, l, qty in self.needs:
+            if levels is None:
+                cum_needs[good] += self.population * qty
+            elif l in levels:
+                cum_needs[good] += self.population * qty
+        return GoodsVector(self.goods, cum_needs)
+
     def unemployed(self):
         return self.population - sum(v for _, v in self.employed.items())
 
     def employed_by(self, id_firm):
         return self.employed.get(id_firm, 0)
+
+    def start_period(self):
+        self.available_income = 0
+        self.consumption = GoodsVector(self.goods)
+
+    def end_period(self):
+        pass
 
     def fired_by(self, id_firm, employees):
         self.employed[id_firm] -= employees
@@ -52,6 +71,14 @@ class Pop(Historizor):
         self.income = income_from_work + income_from_shares
         self.available_income = self.income
 
+    def cash_in_salary(self, salary):
+        self.income += salary
+        self.available_income += salary
+
+    def cash_in_dividends(self, dividends):
+        self.income += dividends
+        self.available_income += dividends
+
     def save(self):
         self.savings += self.income * self.thrift
         self.income *= (1 - self.thrift)
@@ -64,15 +91,22 @@ class Pop(Historizor):
             # ... except if basic need and savings sufficient, in which case use savings
             if level == 0:
                 if self.savings > ((price * qty) - self.income):
-                    self.savings -= (price * qty) - self.income
-                    self.income = 0
+                    from_savings = (price * qty) - self.income
+                    from_income = self.income
+                    self.savings -= from_savings
+                    self.income -= from_income
                     self.consumption[good] += qty
                     return 1
+            # Accounting
             discount = self.income / (price * qty)
-            self.income = 0
+
+            amount = self.income
+            self.income -= amount
             self.consumption[good] += qty * discount
             return discount
 
-        self.income -= price * qty
+        # Accounting
+        amount = price * qty
+        self.income -= amount
         self.consumption[good] += qty
         return 1

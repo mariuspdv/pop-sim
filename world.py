@@ -112,13 +112,8 @@ class World:
             e.g. how many people could my economy feed and clothe? """
         self.adjusted_gdp = self.gdp / self.price_level
 
-    def reset_consumption(self):
-        """ Necessary logistics to keep track of consumption """
-        for pop in self.pops.values():
-            pop.consumption = GoodsVector(self.goods)
-
     def compute_aggregates(self):
-        """ Compute aggregated indicators and reinitialize consumption """
+        """ Compute aggregated indicators """
         self.compute_tot_population()
         self.compute_unemployment_rate()
         self.compute_gdp()
@@ -126,12 +121,10 @@ class World:
         self.compute_price_level()
         self.compute_adjusted_gdp()
 
-        self.reset_consumption()
-
-    def set_goods_supply(self):
-        """ Each Firm defines its target production goal"""
+    def set_target_supply_and_price(self):
+        """ Each Firm defines its target production goal and price"""
         for firm in self.firms.values():
-            firm.set_supply()
+            firm.set_target_supply_and_price()
 
     def labor_pool_for(self, hiring_id_firm, pop_level, max_wage):
         """ A Firm can ask the World to give a view of the labor pool currently paid under a certain level """
@@ -146,7 +139,14 @@ class World:
 
     def clear_labor_market_for(self, pop_level):
         """ Adjust aggregated demand, supply and wages on labor market """
-        target_demand = {id_firm: firm.set_labor_demand_for(pop_level) for id_firm, firm in self.firms.items()}
+
+        # Compute ideal workforce
+        [firm.set_labor_demand_for(pop_level) for id_firm, firm in self.firms.items()]
+        # Fire worker to match ideal workforce
+        [firm.fire_to_match_labor_demand_for(pop_level) for id_firm, firm in self.firms.items()]
+
+        # Start of the hiring phase
+        target_demand = {id_firm: firm.get_labor_demand_for(pop_level) for id_firm, firm in self.firms.items()}
         # lab_demand represents the target headcount including the current employees
 
         # Hire one by one until target is reached
@@ -158,7 +158,7 @@ class World:
                 hiring_firm = self.firms[hiring_id_firm]
 
             # The Firm tries to find somebody to recruit on the market in its wage range
-            action, parameters = hiring_firm.try_to_match_labor_demand(pop_level, target_demand[hiring_id_firm])
+            action, parameters = hiring_firm.try_to_match_labor_demand(pop_level)
             if action == "give_up":
                 del target_demand[hiring_id_firm]
                 continue
@@ -186,33 +186,49 @@ class World:
                 # Poached firm let the worker flee
                 firm_to_poach.adjust_workers_for(pop_level, -1)
 
-    def pay_salaries_and_dividends(self):
-        # Iterate through firms to find dividends
-        dividends = {id_pop: 0 for id_pop, pop in self.pops.items()}
+    def get_workers_for(self, id_firm):
+        workforce = {}
+        for id_pop, pop in self.pops.items():
+            w = pop.employed_by(id_firm)
+            if w > 0:
+                workforce[id_pop] = (pop.pop_type, w)
+        return workforce
+
+    def pay_salaries(self):
         for id_firm, firm in self.firms.items():
-            tot_dividends = firm.dividends
+            # Each firm will pay salaries
+            salaries = firm.pay_salaries()
+            # The world distributes the salaries
+            for id_pop, salary in salaries.items():
+                self.pops[id_pop].cash_in_salary(salary)
+
+    def pay_dividends(self):
+        # Iterate through firms to find dividends
+        for id_firm, firm in self.firms.items():
+            # Each firm will pay dividends
+            tot_dividends = firm.pay_dividends()
             if tot_dividends > 0:
                 # Find the shares and normalise
                 all_shares = sum(self.depositary[id_firm].values())
                 firm_dividends = {id_pop: (tot_dividends * shares / all_shares)
                                   for id_pop, shares in self.depositary[id_firm].items() if shares != 0}
+                # Distribute the cash according to the dividends
                 for id_pop, cash in firm_dividends.items():
-                    dividends[id_pop] += cash
+                    self.pops[id_pop].cash_in_dividends(cash)
 
-        # Add salary and pay
-        for pop in self.pops.values():
-            pop.set_income_from_salary_and_dividends(self.firms, dividends)
+    def produce_goods(self):
+        for firm in self.firms.values():
+            firm.produce_goods()
 
     def clear_goods_market(self):
         """ Works like a giant supermarket queue: needs are sorted by levels and split up in increments,
             then matched randomly (with weights on prices) with the products and the transaction happens """
 
-        def aggregate_supply():
+        def prices_for_goods():
             """ Creates a dictionary with firms' supply and prices indexed by goods """
             supply = {good: {} for good in self.goods}
             for id_firm, firm in self.firms.items():
-                qty, price = firm.market_supply()
-                supply[firm.product][id_firm] = price
+                supply[firm.product][id_firm] = firm.get_price()
             return supply
 
         def market_queue(level):
@@ -234,8 +250,8 @@ class World:
             random.shuffle(queue)
             return queue
 
-        # Compute the aggregated supply of goods over all the firms
-        tot_supply = aggregate_supply()
+        # Gather market prices for goods
+        market_prices = prices_for_goods()
 
         for level in range(3):
             # Once basic needs are met, people save a portion of their income
@@ -254,21 +270,19 @@ class World:
                 # Add pop to broke-pops if no more money
                 while qty != 0:
                     if level != 0 and pop.income == 0:
-                        if pop.income < 0:
-                            print("aiaiaiaiaai")
                         broke_pops.add(id_pop)
                         break
 
                     # Choose a seller randomly in tot_supply, with weights inversely proportional to price
                     # if multiple choices so that cheaper goods are picked more quickly
-                    firm_pool = [id_firm for id_firm in tot_supply[good] if self.firms[id_firm].has_stock()]
+                    firm_pool = [id_firm for id_firm in market_prices[good] if self.firms[id_firm].has_stock()]
                     if len(firm_pool) == 0:
                         sold_out_goods.add(good)
                         break
                     elif len(firm_pool) == 1:
                         [id_f] = firm_pool
                     else:
-                        prices_pool = [1 / (p ** 2) for id_firm, p in tot_supply[good].items()
+                        prices_pool = [1 / (p ** 2) for id_firm, p in market_prices[good].items()
                                        if self.firms[id_firm].has_stock()]
                         [id_f] = random.choices(firm_pool, weights=prices_pool, k=1)
 
@@ -285,31 +299,51 @@ class World:
                     if discount != 1:
                         break
 
-    def update_firms_profits(self):
+    def decide_dividend_to_distribute(self):
         for firm in self.firms.values():
-            firm.update_profits()
+            firm.decide_dividend_to_distribute()
+
+    def start_period(self):
+        for firm in self.firms.values():
+            firm.start_period()
+        for pop in self.pops.values():
+            pop.start_period()
+
+    def end_period(self):
+        # Technical logistics
+        self.add_to_history()
+        # Compute useful aggregate(s)
+        self.compute_aggregates()
+        # Close period
+        for firm in self.firms.values():
+            firm.end_period()
+        for pop in self.pops.values():
+            pop.end_period()
 
     def tick(self):
+        self.start_period()
 
-        # Core mechanisms
+        # Firms set their target production goals and price
+        self.set_target_supply_and_price()
 
-        # Firms set their target production goals
-        self.set_goods_supply()
         # Labor market clearing for BlueCollars
         self.clear_labor_market_for(0)
         # Labor market clearing for WhiteCollars
         self.clear_labor_market_for(1)
 
-        # self.adjust_all_supply()
-        self.pay_salaries_and_dividends()
+        # Distribute money from firms to pops
+        self.pay_salaries()
+        self.pay_dividends()
+
+        # Produce goods
+        self.produce_goods()
+
+        # Buy goods
         self.clear_goods_market()
-        self.update_firms_profits()
 
-        # Technical logistics
-        self.add_to_history()
+        self.decide_dividend_to_distribute()
 
-        # Compute useful aggregate(s)
-        self.compute_aggregates()
+        self.end_period()
 
     def export(self):
         def flatten_dict(prefix, a_dict):
@@ -325,7 +359,7 @@ class World:
 
             for id_firm, firm in self.firms.items():
                 firm_name = f"firm{id_firm}"
-                for key in {'profits', 'product', 'sold', 'stock', 'price', 'productivity', 'account'}:
+                for key in {'profits', 'product', 'sold', 'stock', 'price', 'productivity', 'account', 'dividends', "capital"}:
                     d[f"{firm_name}_{key}"] = firm.get_from_history(key, i)
                 for pop_level in range(2):
                     d[f"{firm_name}_workers_{pop_level}"] = firm.get_from_history('workers', i)[pop_level]
