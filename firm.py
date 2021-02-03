@@ -83,6 +83,11 @@ class Firm(Historizor):
         self.capital += self.profits - self.dividends
         self.profits = 0
 
+    def add_interest(self, r):
+        #TODO Normally, interest should impact profits
+        self.account *= (1 + r)
+        # self.profit += self.account * r
+
     def hire(self, pop_level, new_wage, delta=1):
         self.workers[pop_level] += delta
         average_wage = (self.wages_of(pop_level) * (self.workers[pop_level] - delta) + new_wage * delta) \

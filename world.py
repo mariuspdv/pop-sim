@@ -6,6 +6,8 @@ import random
 class World:
     TO_HISTORIZE = {'tot_population', 'unemployment_rate', 'gdp', 'gdp_per_capita',
                     'price_level', 'indexed_price_level', 'inflation', 'adjusted_gdp'}
+    INTEREST_RATE = 0.01         #TODO @Marius check
+
 
     def __init__(self, goods, firms, pops, depositary):
         # Core properties
@@ -309,6 +311,13 @@ class World:
         for pop in self.pops.values():
             pop.start_period()
 
+    def account_for_interests(self):
+        #TODO @Marius check
+        for firm in self.firms.values():
+            firm.add_interest(self.INTEREST_RATE)
+        for pop in self.pops.values():
+            pop.add_interest(self.INTEREST_RATE)
+
     def end_period(self):
         # Technical logistics
         self.add_to_history()
@@ -343,6 +352,9 @@ class World:
 
         self.decide_dividend_to_distribute()
 
+        #TODO @Marius Check
+        self.account_for_interests()
+
         self.end_period()
 
     def export(self):
@@ -376,6 +388,7 @@ class World:
         return full_table
 
     def high_level_analysis(self):
+        # Production analysis
         cum_needs = GoodsVector(self.goods)
         cum_needs01 = GoodsVector(self.goods)
         for pop in self.pops.values():
@@ -396,8 +409,12 @@ class World:
             ratio_needs_prod[good] = prod_capacity[good] / cum_needs[good]
             ratio_needs_prod_01[good] = prod_capacity[good] / cum_needs01[good]
 
-        return {'cumulated_needs_01': cum_needs01,
-                'cumulated_needs': cum_needs,
-                'production': prod_capacity,
-                'ratio_needs_prod': ratio_needs_prod,
-                'ratio_needs_prod_01': ratio_needs_prod_01}
+        analysis = {'cumulated_needs_01': cum_needs01,
+                    'cumulated_needs': cum_needs,
+                    'production': prod_capacity,
+                    'ratio_needs_prod': ratio_needs_prod,
+                    'ratio_needs_prod_01': ratio_needs_prod_01}
+        to_display = {'unemployment_rate', 'gdp', 'gdp_per_capita', 'indexed_price_level','adjusted_gdp'}
+        at_i = self.history[-1]
+        analysis.update({k: at_i[k] for k in to_display})
+        return analysis
