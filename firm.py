@@ -125,7 +125,7 @@ class Firm(Historizor):
                     self.price = self.price * (1 - self.PRICE_CHANGE)
                 else:
                     self.supply_goal = production
-                    self.price = max(self.price * (1 + self.PRICE_CHANGE), unit_cost)
+                    self.price = max(self.price * (1 - self.PRICE_CHANGE), unit_cost)
             else:
                 self.supply_goal = production
             return
