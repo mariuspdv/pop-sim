@@ -83,6 +83,11 @@ class Pop(Historizor):
         self.savings += self.income * self.thrift
         self.income *= (1 - self.thrift)
 
+    def add_interest(self, r):
+        #TODO @Marius check
+        self.income *= (1 + r)
+        self.savings *= (1 + r)
+
     def buy_good(self, good, level, qty, price):
         """ Takes care of the transaction on the buyer's side, changing income and consumption """
 
