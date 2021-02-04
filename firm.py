@@ -159,7 +159,20 @@ class Firm(Historizor):
     def set_white_labor_demand(self):
         # TODO revoir cette fonction (pour éviter croissance des salaires abusive?)
         ideal_demand = self.workers[0] * (self.WHITE_RATIO / (1 - self.WHITE_RATIO))
-        self.lab_demand[1] = int(ideal_demand)
+        current_white_workforce = self.workers_for(1)
+        # If we plan to fire people, let's do it
+        if ideal_demand <= current_white_workforce:
+            self.lab_demand[1] = int(ideal_demand)
+            return
+        # if not, value the productivity boost at the sales price and check with the salary level.
+        # We should take the "market" salary I think, but let's start with the salary we know
+        delta_prod_value = self.marginal_white_worker_production() * self.price
+        if delta_prod_value > self.wages_of(1):
+            # Try to hire
+            self.lab_demand[1] = int(ideal_demand)
+        else:
+            # do nothing
+            self.lab_demand[1] = current_white_workforce
 
     def set_labor_demand_for(self, pop_level):
         if pop_level == 0:
@@ -204,15 +217,21 @@ class Firm(Historizor):
         # Poach the worker by offering a bonus to his/her current salary
         return "poach", (id_firm_to_poach, self.POACHED_BONUS)
 
-    def adjusted_productivity(self):
+    def adjusted_productivity(self, white_workers=None):
+        #TODO @marius j'ai simplifié le code et ajouté la possibilité de passer le nombre de white collar que tu veux
         def productivity_boost(x):
-            if x < self.WHITE_RATIO:
-                return math.log(1 + 4 * x - 10 * x**2)
-            return math.log(1 + 4 * self.WHITE_RATIO - 10 * self.WHITE_RATIO**2)
-
-        white_workers = self.workers_for(1)
+            x = min(x, self.WHITE_RATIO)
+            return math.log(1 + 4 * x - 10 * x**2)
+        if white_workers is None:
+            white_workers = self.workers_for(1)
         ratio = white_workers / (white_workers + self.workers_for(0)) if white_workers != 0 else 0
         return (1 + productivity_boost(ratio)) * self.productivity
+
+    def marginal_white_worker_production(self):
+        #TODO @marius j'essaie de trouver le delta de production pour un white collar de plus
+        production = self.workers_for(0) * self.adjusted_productivity()
+        marginal_delta_production = self.workers_for(0) * self.adjusted_productivity(self.workers_for(1) + 1)
+        return marginal_delta_production - production
 
     def produce_goods(self):
         self.stock += self.workers_for(0) * self.adjusted_productivity()
