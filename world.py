@@ -1,6 +1,9 @@
 # It says hello
 from goodsvector import GoodsVector
 import random
+from blue_collar import BlueCollar
+from white_collar import WhiteCollar
+import math
 
 
 class World:
@@ -434,3 +437,75 @@ class World:
         average_wages.append(sum(wages) / sum(workers))
         analysis.update({'average_wages': average_wages})
         return analysis
+
+    def ideal_economy(self):
+        def adjusted_productivity(productivity, blue_workers, white_workers):
+            def productivity_boost(x):
+                x = min(x, 0.15)
+                return math.log(1 + 4 * x - 10 * x ** 2)
+            ratio = white_workers / (white_workers + blue_workers) if white_workers != 0 else 0
+            return (1 + productivity_boost(ratio)) * productivity
+
+        cum_needs = {i: GoodsVector(self.goods) for i in range(3)}
+        for level in range(3):
+            for pop in self.pops.values():
+                cum_needs[level] += pop.cumulated_needs({level})
+
+        # For each good, retain the best productivity that the firms can offer
+        productivies = {good: max(firm.productivity for firm in self.firms.values() if firm.product == good) for good in self.goods}
+
+        blue_collars = sum(pop.population for pop in self.pops.values() if type(pop) is BlueCollar)
+        white_collars = sum(pop.population for pop in self.pops.values() if type(pop) is WhiteCollar)
+        initial_blue_collars = blue_collars
+        initial_white_collars = white_collars
+        blue_workers = GoodsVector(self.goods)
+        white_workers = GoodsVector(self.goods)
+        # Try to maximise the output (total production)
+        # and also matching needs according prioritizing the lowest need levels
+        for level in range(3):
+            for good, needs in cum_needs[level].items():
+                productivity = productivies[good]
+                # Get a rough estimate of the number of blue workers
+                blue_w = min(int(needs / productivity), blue_collars)
+                # Number of white workers that maximizes the productivity
+                white_w = min(int(0.15 * 1.15 * blue_w), white_collars)
+                # A better estimate of the blue workers, based on the adjusted productivity
+                blue_w = min(int(needs / adjusted_productivity(productivity, blue_w, white_w)), blue_collars)
+                # Try to set the white workers at the optimal level
+                white_w = min(int(0.15 * 1.15 * blue_w), white_collars)
+                blue_workers[good] += blue_w
+                white_workers[good] += white_w
+                blue_collars -= blue_w
+                white_collars -= white_w
+
+        # Ratio of white_workers
+        w_b_ratio = {good: (white_workers[good] / (blue_workers[good] + white_workers[good])) for good in self.goods}
+
+        # Total production
+        production = GoodsVector(self.goods)
+        for good in self.goods:
+            production[good] = blue_workers[good] * adjusted_productivity(productivies[good], blue_workers[good], white_workers[good])
+
+        # Recompute needs
+        cum_needs_tot = cum_needs[0] + cum_needs[1] + cum_needs[2]
+        cum_needs01 = cum_needs[0] + cum_needs[1]
+        ratio_needs_prod = GoodsVector(self.goods)
+        ratio_needs_prod_01 = GoodsVector(self.goods)
+        for good in self.goods:
+            ratio_needs_prod[good] = production[good] / cum_needs_tot[good]
+            ratio_needs_prod_01[good] = production[good] / cum_needs01[good]
+
+        return {
+            'white_workers': white_workers,
+            'blue_workers': blue_workers,
+            'initial_blue_collars': initial_blue_collars,
+            'initial_white_collars': initial_white_collars,
+            'residual_blue_collars': blue_collars,
+            'residual_white_collars': white_collars,
+            'white_blue_ratio': w_b_ratio,
+            'cumulated_needs_01': cum_needs01,
+            'cumulated_needs': cum_needs,
+            'production': production,
+            'ratio_needs_prod': ratio_needs_prod,
+            'ratio_needs_prod_01': ratio_needs_prod_01
+        }

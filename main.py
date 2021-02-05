@@ -35,16 +35,16 @@ firm_3 = Firm(id_firm=3, product='clothes', blue_wages=1.41, white_wages=1.52, p
 firm_4 = Firm(id_firm=4, product='luxury', blue_wages=1, white_wages=1.3, productivity=0.5)
 firm_5 = Firm(id_firm=5, product='food', blue_wages=1.1, white_wages=1.69, productivity=3)
 needs_1 = [('food', 0, 0.6), ('lodging', 0, 0.5), ('clothes', 0, 0.2),
-           ('food', 1, 0.2), ('lodging', 1, 0.2), ('clothes', 1, 0.6), ('luxury', 1, 0.1),
+           ('food', 1, 0.2), ('lodging', 1, 0.2), ('clothes', 1, 0.6), ('luxury', 1, 0.05),
            ('luxury', 2, 10)]
 needs_2 = [('food', 0, 0.6), ('lodging', 0, 0.6), ('clothes', 0, 0.3),
-           ('food', 1, 0.2), ('lodging', 1, 0.3), ('clothes', 1, 0.5), ('luxury', 1, 0.15),
+           ('food', 1, 0.2), ('lodging', 1, 0.3), ('clothes', 1, 0.5), ('luxury', 1, 0.05),
            ('luxury', 2, 10)]
 needs_3 = [('food', 0, 0.6), ('lodging', 0, 0.5), ('clothes', 0, 0.3),
-           ('food', 1, 0.3), ('lodging', 1, 0.3), ('clothes', 1, 0.5), ('luxury', 1, 0.1),
+           ('food', 1, 0.3), ('lodging', 1, 0.3), ('clothes', 1, 0.5), ('luxury', 1, 0.05),
            ('luxury', 2, 10)]
-needs_4 = [('food', 0, 0.8), ('lodging', 0, 0.7), ('clothes', 0, 0.6), ('luxury', 0, 0.1),
-           ('food', 1, 0.3), ('lodging', 1, 0.4), ('clothes', 1, 0.4), ('luxury', 1, 0.7),
+needs_4 = [('food', 0, 0.8), ('lodging', 0, 0.7), ('clothes', 0, 0.6), ('luxury', 0, 0.05),
+           ('food', 1, 0.3), ('lodging', 1, 0.4), ('clothes', 1, 0.4), ('luxury', 1, 0.2),
            ('luxury', 2, 10)]
 needs_5 = [('food', 0, 0.8), ('lodging', 0, 0.7), ('clothes', 0, 1), ('luxury', 0, 1),
            ('food', 1, 0.4), ('lodging', 1, 0.6), ('clothes', 1, 0.6), ('luxury', 1, 2),
@@ -53,7 +53,7 @@ employ_1 = {1: 9, 2: 6, 3: 3, 4: 7, 5: 0}
 employ_2 = {1: 0, 2: 3, 3: 7, 4: 0, 5: 2}
 employ_3 = {1: 0, 2: 1, 3: 0, 4: 1, 5: 0}
 employ_4 = {1: 1, 2: 1, 3: 1, 4: 0, 5: 0}
-f = 10000
+f = 1000
 employ_1 = {k: f * v for k, v in employ_1.items()}
 employ_2 = {k: f * v for k, v in employ_2.items()}
 employ_3 = {k: f * v for k, v in employ_3.items()}
@@ -81,5 +81,9 @@ full_table = world.export()
 write_to_csv('export_run.csv', full_table)
 # nice_print(full_table)
 for k, v in  world.high_level_analysis().items():
+    print(k, ':', v)
+
+print("\nIdeal economy")
+for k, v in  world.ideal_economy().items():
     print(k, ':', v)
 
