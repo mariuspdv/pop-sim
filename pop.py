@@ -1,5 +1,3 @@
-# What is this unruly mob? What are they doing here? They smell!
-# Err... These are *your* people, majesty.
 from historizor import Historizor
 from goodsvector import GoodsVector
 
@@ -84,8 +82,6 @@ class Pop(Historizor):
         self.income *= (1 - self.thrift)
 
     def add_interest(self, r):
-        #TODO @Marius check
-        self.income *= (1 + r)
         self.savings *= (1 + r)
 
     def buy_good(self, good, level, qty, price):
@@ -93,15 +89,14 @@ class Pop(Historizor):
 
         # If lack of money, compute the proportion of the increment bought...
         if self.income < (price * qty):
-            # ... except if basic need and savings sufficient, in which case use savings
+            # ... except if basic need, in which case use savings (or borrow, no constraints atm)
             if level == 0:
-                if self.savings > ((price * qty) - self.income):
-                    from_savings = (price * qty) - self.income
-                    from_income = self.income
-                    self.savings -= from_savings
-                    self.income -= from_income
-                    self.consumption[good] += qty
-                    return 1
+                from_savings = (price * qty) - self.income
+                from_income = self.income
+                self.savings -= from_savings
+                self.income -= from_income
+                self.consumption[good] += qty
+                return 1
             # Accounting
             discount = self.income / (price * qty)
 

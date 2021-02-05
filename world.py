@@ -6,8 +6,7 @@ import random
 class World:
     TO_HISTORIZE = {'tot_population', 'unemployment_rate', 'gdp', 'gdp_per_capita',
                     'price_level', 'indexed_price_level', 'inflation', 'adjusted_gdp'}
-    INTEREST_RATE = 0.01         #TODO @Marius check
-
+    INTEREST_RATE = 0.01
 
     def __init__(self, goods, firms, pops, depositary):
         # Core properties
@@ -353,10 +352,10 @@ class World:
         # Buy goods
         self.clear_goods_market()
 
-        self.decide_dividend_to_distribute()
-
         #TODO @Marius Check
         self.account_for_interests()
+
+        self.decide_dividend_to_distribute()
 
         self.end_period()
 

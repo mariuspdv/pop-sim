@@ -32,7 +32,7 @@ class Firm(Historizor):
         self.sold = 0
 
         # Accounting
-        self.profits = profits  # Shluld be called  'income' in accounting parlance
+        self.profits = profits  # Should be called  'income' in accounting parlance
         self.account = account
         self.dividends = 0
         self.capital = 0
@@ -84,9 +84,8 @@ class Firm(Historizor):
         self.profits = 0
 
     def add_interest(self, r):
-        #TODO Normally, interest should impact profits
         self.account *= (1 + r)
-        # self.profit += self.account * r
+        self.profits += self.account * r
 
     def hire(self, pop_level, new_wage, delta=1):
         self.workers[pop_level] += delta
@@ -157,7 +156,6 @@ class Firm(Historizor):
         self.lab_demand[0] = lab_demand
 
     def set_white_labor_demand(self):
-        # TODO revoir cette fonction (pour éviter croissance des salaires abusive?)
         ideal_demand = self.workers[0] * (self.WHITE_RATIO / (1 - self.WHITE_RATIO))
         current_white_workforce = self.workers_for(1)
         # If we plan to fire people, let's do it
@@ -218,7 +216,6 @@ class Firm(Historizor):
         return "poach", (id_firm_to_poach, self.POACHED_BONUS)
 
     def adjusted_productivity(self, white_workers=None):
-        #TODO @marius j'ai simplifié le code et ajouté la possibilité de passer le nombre de white collar que tu veux
         def productivity_boost(x):
             x = min(x, self.WHITE_RATIO)
             return math.log(1 + 4 * x - 10 * x**2)
@@ -228,7 +225,6 @@ class Firm(Historizor):
         return (1 + productivity_boost(ratio)) * self.productivity
 
     def marginal_white_worker_production(self):
-        #TODO @marius j'essaie de trouver le delta de production pour un white collar de plus
         production = self.workers_for(0) * self.adjusted_productivity()
         marginal_delta_production = self.workers_for(0) * self.adjusted_productivity(self.workers_for(1) + 1)
         return marginal_delta_production - production
