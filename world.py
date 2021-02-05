@@ -143,9 +143,12 @@ class World:
         """ Adjust aggregated demand, supply and wages on labor market """
 
         # Compute ideal workforce
-        [firm.set_labor_demand_for(pop_level) for id_firm, firm in self.firms.items()]
+        for id_firm, firm in self.firms.items():
+            firm.set_labor_demand_for(pop_level)
+
         # Fire worker to match ideal workforce
-        [firm.fire_to_match_labor_demand_for(pop_level) for id_firm, firm in self.firms.items()]
+        for id_firm, firm in self.firms.items():
+            firm.fire_to_match_labor_demand_for(pop_level)
 
         # Start of the hiring phase
         target_demand = {id_firm: firm.get_labor_demand_for(pop_level) for id_firm, firm in self.firms.items()}
@@ -388,6 +391,7 @@ class World:
         return full_table
 
     def high_level_analysis(self):
+        #TODO @marius je sais pas si tu as vu cette fonction. J'essaie de synthétiser les données clés "humainement" compréhensibles
         # Production analysis
         cum_needs = GoodsVector(self.goods)
         cum_needs01 = GoodsVector(self.goods)
@@ -417,4 +421,10 @@ class World:
         to_display = {'unemployment_rate', 'gdp', 'gdp_per_capita', 'indexed_price_level','adjusted_gdp'}
         at_i = self.history[-1]
         analysis.update({k: at_i[k] for k in to_display})
+
+        wages = [sum(firm.wages_of(i) * firm.workers_for(i) for firm in self.firms.values()) for i in range(2)]
+        workers = [sum(firm.workers_for(i) for firm in self.firms.values()) for i in range(2)]
+        average_wages = [wages[i] / workers[i] for i in range(2)]
+        average_wages.append(sum(wages) / sum(workers))
+        analysis.update({'average_wages': average_wages})
         return analysis
