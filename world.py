@@ -220,6 +220,10 @@ class World:
                 for id_pop, cash in firm_dividends.items():
                     self.pops[id_pop].cash_in_dividends(cash)
 
+    def use_savings(self):
+        for pop in self.get_pops().values():
+            pop.use_savings()
+
     def produce_goods(self):
         for firm in self.firms.values():
             firm.produce_goods()
@@ -345,6 +349,9 @@ class World:
         # Distribute money from firms to pops
         self.pay_salaries()
         self.pay_dividends()
+
+        # Pop transfer from savings account
+        self.use_savings()
 
         # Produce goods
         self.produce_goods()

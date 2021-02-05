@@ -77,9 +77,19 @@ class Pop(Historizor):
         self.income += dividends
         self.available_income += dividends
 
+    def use_savings(self):
+        if self.savings > 3 * self.income:
+            income_supplement = 0.1 * self.savings
+            self.savings -= income_supplement
+            self.income += income_supplement
+
     def save(self):
-        self.savings += self.income * self.thrift
-        self.income *= (1 - self.thrift)
+        if self.savings < (-3 * self.income):
+            self.savings += self.income
+            self.income = 0
+        else:
+            self.savings += self.income * self.thrift
+            self.income *= (1 - self.thrift)
 
     def add_interest(self, r):
         self.savings *= (1 + r)
