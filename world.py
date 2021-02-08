@@ -521,6 +521,20 @@ class World:
                         average_needs[good] += qty / initial_white_collars
             return average_needs
 
+        fixed_good = 'food'
+        goods = list(self.goods)
+        goods.sort()
+        avg_blue_n = average_blue_needs()
+        avg_white_n = average_white_needs()
+        a = [
+            [blue_workers[good] * avg_blue_n[g] + white_workers[good] * avg_white_n[g]
+             - (production[good] if g == good else 0) for g in goods if g != fixed_good]
+            for good in goods if good != fixed_good
+        ]
+
+        b = [-(blue_workers[g] * avg_blue_n[fixed_good] + white_workers[g] * avg_white_n[fixed_good]) for g in goods if g != fixed_good]
+
+        """
         a = np.array([[blue_workers['lodging'] * average_blue_needs()['lodging'] + white_workers['lodging'] * average_white_needs()['lodging'] - production['lodging'],
                        blue_workers['lodging'] * average_blue_needs()['clothes'] + white_workers['lodging'] * average_white_needs()['clothes'],
                        blue_workers['lodging'] * average_blue_needs()['luxury'] + white_workers['lodging'] * average_white_needs()['luxury']],
@@ -533,8 +547,10 @@ class World:
         b = np.array([-(blue_workers['lodging'] * average_blue_needs()['food'] + white_workers['lodging'] * average_white_needs()['food']),
                       -(blue_workers['clothes'] * average_blue_needs()['food'] + white_workers['clothes'] * average_white_needs()['food']),
                       -(blue_workers['luxury'] * average_blue_needs()['food'] + white_workers['luxury'] * average_white_needs()['food'])])
+        """
+        a = np.array(a)
+        b = np.array(b)
         p = np.linalg.solve(a, b)
-        print(f'Prices: food: 1, lodging: {p[0]}, clothes: {p[1]}, luxury: {p[2]}')
 
         ideal_prices = {'food': 1, 'lodging': p[0], 'clothes': p[1], 'luxury': p[2]}
 
@@ -544,7 +560,7 @@ class World:
                 needs = pop.cumulated_needs({0, 1})
                 wages[pop.id_pop] = sum([price * qty / pop.population for good, qty in needs.items() for g, price in prices.items() if g == good])
             return wages
-        print(ideal_wages(ideal_prices))
+        ideal_w = ideal_wages(ideal_prices)
 
         return {
             'white_workers': white_workers,
@@ -559,5 +575,7 @@ class World:
             'cumulated_needs_tot': cum_needs_tot,
             'production': production,
             'ratio_needs_prod': ratio_needs_prod,
-            'ratio_needs_prod_01': ratio_needs_prod_01
+            'ratio_needs_prod_01': ratio_needs_prod_01,
+            'ideal_prices': ideal_prices,
+            'ideal_wages': ideal_w
         }
