@@ -5,6 +5,7 @@ from blue_collar import BlueCollar
 from white_collar import WhiteCollar
 from capitalist import Capitalist
 import math
+import numpy as np
 
 
 class World:
@@ -366,7 +367,6 @@ class World:
         # Buy goods
         self.clear_goods_market()
 
-        # TODO @Marius Check
         self.account_for_interests()
 
         self.decide_dividend_to_distribute()
@@ -405,8 +405,6 @@ class World:
         return full_table
 
     def high_level_analysis(self):
-        # TODO @marius je sais pas si tu as vu cette fonction. J'essaie de synthétiser les données clés "humainement" compréhensibles
-        # Production analysis
         cum_needs = GoodsVector(self.goods)
         cum_needs01 = GoodsVector(self.goods)
         for pop in self.pops.values():
@@ -459,7 +457,7 @@ class World:
                     cum_needs[level] += pop.cumulated_needs({level})
 
         # For each good, retain the best productivity that the firms can offer
-        productivies = {good: max(firm.productivity for firm in self.firms.values() if firm.product == good) for good in
+        productivities = {good: max(firm.productivity for firm in self.firms.values() if firm.product == good) for good in
                         self.goods}
 
         blue_collars = sum(pop.population for pop in self.pops.values() if type(pop) is BlueCollar)
@@ -472,7 +470,7 @@ class World:
         # and also matching needs according prioritizing the lowest need levels
         for level in range(3):
             for good, needs in cum_needs[level].items():
-                productivity = productivies[good]
+                productivity = productivities[good]
                 # Get a rough estimate of the number of blue workers
                 blue_w = min(int(needs / productivity), blue_collars)
                 # Number of white workers that maximizes the productivity
@@ -492,7 +490,7 @@ class World:
         # Total production
         production = GoodsVector(self.goods)
         for good in self.goods:
-            production[good] = blue_workers[good] * adjusted_productivity(productivies[good],
+            production[good] = blue_workers[good] * adjusted_productivity(productivities[good],
                                                                           blue_workers[good],
                                                                           white_workers[good])
 
@@ -505,7 +503,49 @@ class World:
             ratio_needs_prod[good] = production[good] / cum_needs_tot[good]
             ratio_needs_prod_01[good] = production[good] / cum_needs01[good]
 
-        # TODO définir les prix et les salaires
+        def average_blue_needs():
+            average_needs = GoodsVector(self.goods)
+            for pop in self.pops.values():
+                if type(pop) is BlueCollar:
+                    needs = pop.cumulated_needs({0, 1})
+                    for good, qty in needs.items():
+                        average_needs[good] += qty / initial_blue_collars
+            return average_needs
+
+        def average_white_needs():
+            average_needs = GoodsVector(self.goods)
+            for pop in self.pops.values():
+                if type(pop) is WhiteCollar:
+                    needs = pop.cumulated_needs({0, 1})
+                    for good, qty in needs.items():
+                        average_needs[good] += qty / initial_white_collars
+            return average_needs
+
+        a = np.array([[blue_workers['lodging'] * average_blue_needs()['lodging'] + white_workers['lodging'] * average_white_needs()['lodging'] - production['lodging'],
+                       blue_workers['lodging'] * average_blue_needs()['clothes'] + white_workers['lodging'] * average_white_needs()['clothes'],
+                       blue_workers['lodging'] * average_blue_needs()['luxury'] + white_workers['lodging'] * average_white_needs()['luxury']],
+                      [blue_workers['clothes'] * average_blue_needs()['lodging'] + white_workers['clothes'] * average_white_needs()['lodging'],
+                       blue_workers['clothes'] * average_blue_needs()['clothes'] + white_workers['clothes'] * average_white_needs()['clothes'] - production['clothes'],
+                       blue_workers['clothes'] * average_blue_needs()['luxury'] + white_workers['clothes'] * average_white_needs()['luxury']],
+                      [blue_workers['luxury'] * average_blue_needs()['lodging'] + white_workers['luxury'] * average_white_needs()['lodging'],
+                       blue_workers['luxury'] * average_blue_needs()['clothes'] + white_workers['luxury'] * average_white_needs()['clothes'],
+                       blue_workers['luxury'] * average_blue_needs()['luxury'] + white_workers['luxury'] * average_white_needs()['luxury'] - production['luxury']]])
+        b = np.array([-(blue_workers['lodging'] * average_blue_needs()['food'] + white_workers['lodging'] * average_white_needs()['food']),
+                      -(blue_workers['clothes'] * average_blue_needs()['food'] + white_workers['clothes'] * average_white_needs()['food']),
+                      -(blue_workers['luxury'] * average_blue_needs()['food'] + white_workers['luxury'] * average_white_needs()['food'])])
+        p = np.linalg.solve(a, b)
+        print(f'Prices: food: 1, lodging: {p[0]}, clothes: {p[1]}, luxury: {p[2]}')
+
+        ideal_prices = {'food': 1, 'lodging': p[0], 'clothes': p[1], 'luxury': p[2]}
+
+        def ideal_wages(prices):
+            wages = {}
+            for pop in self.pops.values():
+                needs = pop.cumulated_needs({0, 1})
+                wages[pop.id_pop] = sum([price * qty / pop.population for good, qty in needs.items() for g, price in prices.items() if g == good])
+            return wages
+        print(ideal_wages(ideal_prices))
+
         return {
             'white_workers': white_workers,
             'blue_workers': blue_workers,
