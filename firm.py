@@ -27,7 +27,6 @@ class Firm(Historizor):
         self.supply_goal = 0
         self.lab_demand = {0: 0, 1: 0}
 
-        #self.supply = 0
         self.revenue = 0
         self.sold = 0
 
@@ -277,3 +276,10 @@ class Firm(Historizor):
         else:
             # self.account += self.profits
             self.dividends = 0
+
+    def liquidate(self):
+        """ Fires all employees, deletes all stock """
+        for level in range(2):
+            self.lab_demand[level] = 0
+            self.fire_to_match_labor_demand_for(level)
+        self.stock = 0
