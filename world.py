@@ -1,6 +1,11 @@
 # It says hello
 from goodsvector import GoodsVector
 import random
+from blue_collar import BlueCollar
+from white_collar import WhiteCollar
+from capitalist import Capitalist
+import math
+import numpy as np
 
 
 class World:
@@ -101,7 +106,8 @@ class World:
                 self.average_price[good] = good_gdp / good_sold
 
         # Price levels formulas
-        self.price_level = sum(qty * self.average_price[good] for good, qty in survival_goods.items()) / self.tot_population
+        self.price_level = sum(
+            qty * self.average_price[good] for good, qty in survival_goods.items()) / self.tot_population
         if self.initial_price_level is None:
             self.initial_price_level = self.price_level
         self.indexed_price_level = self.price_level / self.initial_price_level * 100
@@ -170,7 +176,8 @@ class World:
             if action == "hire_unemployed":
                 wage = parameters
                 # Find a random Pop with unemployed workers
-                agg_lab_supply = {id_pop: pop.unemployed() for id_pop, pop in self.pops.items() if pop.pop_type == pop_level}
+                agg_lab_supply = {id_pop: pop.unemployed() for id_pop, pop in self.pops.items() if
+                                  pop.pop_type == pop_level}
                 [hired_pop] = random.choices(list(agg_lab_supply.keys()), weights=agg_lab_supply.values(), k=1)
                 # Hiring firm hires the worker
                 hiring_firm.hire(pop_level, wage, 1)
@@ -181,7 +188,8 @@ class World:
                 id_firm_to_poach, poached_bonus = parameters
                 firm_to_poach = self.firms[id_firm_to_poach]
                 # Randomly select the origin pop inside the selected firm
-                employed = {id_pop: pop.employed_by(id_firm_to_poach) for id_pop, pop in self.pops.items() if pop.pop_type == pop_level}
+                employed = {id_pop: pop.employed_by(id_firm_to_poach) for id_pop, pop in self.pops.items() if
+                            pop.pop_type == pop_level}
                 [hired_pop] = random.choices(list(employed.keys()), weights=employed.values(), k=1)
                 # Hiring firm hires the worker
                 hiring_firm.hire(pop_level, firm_to_poach.wages_of(pop_level) * poached_bonus, 1)
@@ -318,7 +326,7 @@ class World:
             pop.start_period()
 
     def account_for_interests(self):
-        #TODO @Marius check
+        # TODO @Marius check
         for firm in self.firms.values():
             firm.add_interest(self.INTEREST_RATE)
         for pop in self.pops.values():
@@ -359,7 +367,6 @@ class World:
         # Buy goods
         self.clear_goods_market()
 
-        #TODO @Marius Check
         self.account_for_interests()
 
         self.decide_dividend_to_distribute()
@@ -380,7 +387,8 @@ class World:
 
             for id_firm, firm in self.firms.items():
                 firm_name = f"firm{id_firm}"
-                for key in {'profits', 'product', 'sold', 'stock', 'price', 'productivity', 'account', 'dividends', "capital"}:
+                for key in {'profits', 'product', 'sold', 'stock', 'price', 'productivity', 'account', 'dividends',
+                            "capital"}:
                     d[f"{firm_name}_{key}"] = firm.get_from_history(key, i)
                 for pop_level in range(2):
                     d[f"{firm_name}_workers_{pop_level}"] = firm.get_from_history('workers', i)[pop_level]
@@ -397,8 +405,6 @@ class World:
         return full_table
 
     def high_level_analysis(self):
-        #TODO @marius je sais pas si tu as vu cette fonction. J'essaie de synthétiser les données clés "humainement" compréhensibles
-        # Production analysis
         cum_needs = GoodsVector(self.goods)
         cum_needs01 = GoodsVector(self.goods)
         for pop in self.pops.values():
@@ -424,7 +430,7 @@ class World:
                     'production': prod_capacity,
                     'ratio_needs_prod': ratio_needs_prod,
                     'ratio_needs_prod_01': ratio_needs_prod_01}
-        to_display = {'unemployment_rate', 'gdp', 'gdp_per_capita', 'indexed_price_level','adjusted_gdp'}
+        to_display = {'unemployment_rate', 'gdp', 'gdp_per_capita', 'indexed_price_level', 'adjusted_gdp'}
         at_i = self.history[-1]
         analysis.update({k: at_i[k] for k in to_display})
 
@@ -434,3 +440,142 @@ class World:
         average_wages.append(sum(wages) / sum(workers))
         analysis.update({'average_wages': average_wages})
         return analysis
+
+    def ideal_economy(self):
+        def adjusted_productivity(productivity, blue_workers, white_workers):
+            def productivity_boost(x):
+                x = min(x, 0.15)
+                return math.log(1 + 4 * x - 10 * x ** 2)
+
+            ratio = white_workers / (white_workers + blue_workers) if white_workers != 0 else 0
+            return (1 + productivity_boost(ratio)) * productivity
+
+        cum_needs = {i: GoodsVector(self.goods) for i in range(3)}
+        for level in range(3):
+            for pop in self.pops.values():
+                if type(pop) is not Capitalist:
+                    cum_needs[level] += pop.cumulated_needs({level})
+
+        # For each good, retain the best productivity that the firms can offer
+        productivities = {good: max(firm.productivity for firm in self.firms.values() if firm.product == good) for good in
+                        self.goods}
+
+        blue_collars = sum(pop.population for pop in self.pops.values() if type(pop) is BlueCollar)
+        white_collars = sum(pop.population for pop in self.pops.values() if type(pop) is WhiteCollar)
+        initial_blue_collars = blue_collars
+        initial_white_collars = white_collars
+        blue_workers = GoodsVector(self.goods)
+        white_workers = GoodsVector(self.goods)
+        # Try to maximise the output (total production)
+        # and also matching needs according prioritizing the lowest need levels
+        for level in range(3):
+            for good, needs in cum_needs[level].items():
+                productivity = productivities[good]
+                # Get a rough estimate of the number of blue workers
+                blue_w = min(int(needs / productivity), blue_collars)
+                # Number of white workers that maximizes the productivity
+                white_w = min(int(0.15 * 1.15 * blue_w), white_collars)
+                # A better estimate of the blue workers, based on the adjusted productivity
+                blue_w = min(int(needs / adjusted_productivity(productivity, blue_w, white_w)), blue_collars)
+                # Try to set the white workers at the optimal level
+                white_w = min(int(0.15 * 1.15 * blue_w), white_collars)
+                blue_workers[good] += blue_w
+                white_workers[good] += white_w
+                blue_collars -= blue_w
+                white_collars -= white_w
+
+        # Ratio of white_workers
+        w_b_ratio = {good: (white_workers[good] / (blue_workers[good] + white_workers[good])) for good in self.goods}
+
+        # Total production
+        production = GoodsVector(self.goods)
+        for good in self.goods:
+            production[good] = blue_workers[good] * adjusted_productivity(productivities[good],
+                                                                          blue_workers[good],
+                                                                          white_workers[good])
+
+        # Compute cumulated needs and ratio of production vs needs
+        cum_needs_tot = cum_needs[0] + cum_needs[1] + cum_needs[2]
+        cum_needs01 = cum_needs[0] + cum_needs[1]
+        ratio_needs_prod = GoodsVector(self.goods)
+        ratio_needs_prod_01 = GoodsVector(self.goods)
+        for good in self.goods:
+            ratio_needs_prod[good] = production[good] / cum_needs_tot[good]
+            ratio_needs_prod_01[good] = production[good] / cum_needs01[good]
+
+        def average_blue_needs():
+            average_needs = GoodsVector(self.goods)
+            for pop in self.pops.values():
+                if type(pop) is BlueCollar:
+                    needs = pop.cumulated_needs({0, 1})
+                    for good, qty in needs.items():
+                        average_needs[good] += qty / initial_blue_collars
+            return average_needs
+
+        def average_white_needs():
+            average_needs = GoodsVector(self.goods)
+            for pop in self.pops.values():
+                if type(pop) is WhiteCollar:
+                    needs = pop.cumulated_needs({0, 1})
+                    for good, qty in needs.items():
+                        average_needs[good] += qty / initial_white_collars
+            return average_needs
+
+        fixed_good = 'food'
+        goods = list(self.goods)
+        goods.sort()
+        avg_blue_n = average_blue_needs()
+        avg_white_n = average_white_needs()
+        a = [
+            [blue_workers[good] * avg_blue_n[g] + white_workers[good] * avg_white_n[g]
+             - (production[good] if g == good else 0) for g in goods if g != fixed_good]
+            for good in goods if good != fixed_good
+        ]
+
+        b = [-(blue_workers[g] * avg_blue_n[fixed_good] + white_workers[g] * avg_white_n[fixed_good]) for g in goods if g != fixed_good]
+
+        """
+        a = np.array([[blue_workers['lodging'] * average_blue_needs()['lodging'] + white_workers['lodging'] * average_white_needs()['lodging'] - production['lodging'],
+                       blue_workers['lodging'] * average_blue_needs()['clothes'] + white_workers['lodging'] * average_white_needs()['clothes'],
+                       blue_workers['lodging'] * average_blue_needs()['luxury'] + white_workers['lodging'] * average_white_needs()['luxury']],
+                      [blue_workers['clothes'] * average_blue_needs()['lodging'] + white_workers['clothes'] * average_white_needs()['lodging'],
+                       blue_workers['clothes'] * average_blue_needs()['clothes'] + white_workers['clothes'] * average_white_needs()['clothes'] - production['clothes'],
+                       blue_workers['clothes'] * average_blue_needs()['luxury'] + white_workers['clothes'] * average_white_needs()['luxury']],
+                      [blue_workers['luxury'] * average_blue_needs()['lodging'] + white_workers['luxury'] * average_white_needs()['lodging'],
+                       blue_workers['luxury'] * average_blue_needs()['clothes'] + white_workers['luxury'] * average_white_needs()['clothes'],
+                       blue_workers['luxury'] * average_blue_needs()['luxury'] + white_workers['luxury'] * average_white_needs()['luxury'] - production['luxury']]])
+        b = np.array([-(blue_workers['lodging'] * average_blue_needs()['food'] + white_workers['lodging'] * average_white_needs()['food']),
+                      -(blue_workers['clothes'] * average_blue_needs()['food'] + white_workers['clothes'] * average_white_needs()['food']),
+                      -(blue_workers['luxury'] * average_blue_needs()['food'] + white_workers['luxury'] * average_white_needs()['food'])])
+        """
+        a = np.array(a)
+        b = np.array(b)
+        p = np.linalg.solve(a, b)
+
+        ideal_prices = {'food': 1, 'lodging': p[0], 'clothes': p[1], 'luxury': p[2]}
+
+        def ideal_wages(prices):
+            wages = {}
+            for pop in self.pops.values():
+                needs = pop.cumulated_needs({0, 1})
+                wages[pop.id_pop] = sum([price * qty / pop.population for good, qty in needs.items() for g, price in prices.items() if g == good])
+            return wages
+        ideal_w = ideal_wages(ideal_prices)
+
+        return {
+            'white_workers': white_workers,
+            'blue_workers': blue_workers,
+            'initial_blue_collars': initial_blue_collars,
+            'initial_white_collars': initial_white_collars,
+            'residual_blue_collars': blue_collars,
+            'residual_white_collars': white_collars,
+            'white_blue_ratio': w_b_ratio,
+            'cumulated_needs_01': cum_needs01,
+            'cumulated_needs': cum_needs,
+            'cumulated_needs_tot': cum_needs_tot,
+            'production': production,
+            'ratio_needs_prod': ratio_needs_prod,
+            'ratio_needs_prod_01': ratio_needs_prod_01,
+            'ideal_prices': ideal_prices,
+            'ideal_wages': ideal_w
+        }
