@@ -326,7 +326,6 @@ class World:
             pop.start_period()
 
     def account_for_interests(self):
-        # TODO @Marius check
         for firm in self.firms.values():
             firm.add_interest(self.INTEREST_RATE)
         for pop in self.pops.values():
@@ -534,20 +533,6 @@ class World:
 
         b = [-(blue_workers[g] * avg_blue_n[fixed_good] + white_workers[g] * avg_white_n[fixed_good]) for g in goods if g != fixed_good]
 
-        """
-        a = np.array([[blue_workers['lodging'] * average_blue_needs()['lodging'] + white_workers['lodging'] * average_white_needs()['lodging'] - production['lodging'],
-                       blue_workers['lodging'] * average_blue_needs()['clothes'] + white_workers['lodging'] * average_white_needs()['clothes'],
-                       blue_workers['lodging'] * average_blue_needs()['luxury'] + white_workers['lodging'] * average_white_needs()['luxury']],
-                      [blue_workers['clothes'] * average_blue_needs()['lodging'] + white_workers['clothes'] * average_white_needs()['lodging'],
-                       blue_workers['clothes'] * average_blue_needs()['clothes'] + white_workers['clothes'] * average_white_needs()['clothes'] - production['clothes'],
-                       blue_workers['clothes'] * average_blue_needs()['luxury'] + white_workers['clothes'] * average_white_needs()['luxury']],
-                      [blue_workers['luxury'] * average_blue_needs()['lodging'] + white_workers['luxury'] * average_white_needs()['lodging'],
-                       blue_workers['luxury'] * average_blue_needs()['clothes'] + white_workers['luxury'] * average_white_needs()['clothes'],
-                       blue_workers['luxury'] * average_blue_needs()['luxury'] + white_workers['luxury'] * average_white_needs()['luxury'] - production['luxury']]])
-        b = np.array([-(blue_workers['lodging'] * average_blue_needs()['food'] + white_workers['lodging'] * average_white_needs()['food']),
-                      -(blue_workers['clothes'] * average_blue_needs()['food'] + white_workers['clothes'] * average_white_needs()['food']),
-                      -(blue_workers['luxury'] * average_blue_needs()['food'] + white_workers['luxury'] * average_white_needs()['food'])])
-        """
         a = np.array(a)
         b = np.array(b)
         p = np.linalg.solve(a, b)

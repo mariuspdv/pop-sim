@@ -80,10 +80,10 @@ full_table = world.export()
 
 write_to_csv('export_run.csv', full_table)
 # nice_print(full_table)
-for k, v in  world.high_level_analysis().items():
+for k, v in world.high_level_analysis().items():
     print(k, ':', v)
 
 print("\nIdeal economy")
-for k, v in  world.ideal_economy().items():
+for k, v in world.ideal_economy().items():
     print(k, ':', v)
 
