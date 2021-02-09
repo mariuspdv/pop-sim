@@ -21,6 +21,7 @@ class Firm(Historizor):
         super().__init__()
         self.id_firm = id_firm
         self.product = product
+        self.active = True
         self.workers = {0: 0, 1: 0}
         self.wages = {0: blue_wages, 1: white_wages}
         self.productivity = productivity
@@ -58,6 +59,9 @@ class Firm(Historizor):
         self.price = (sum(self.wages[i] * self.workers[i] for i in range(2))) \
                      / (self.workers_for(0) * self.adjusted_productivity()) * (1 + self.target_margin)
 
+    def is_active(self):
+        return self.active
+
     def workers_for(self, pop_level):
         return self.workers[pop_level]
 
@@ -83,8 +87,9 @@ class Firm(Historizor):
         self.profits = 0
 
     def add_interest(self, r):
-        self.account *= (1 + r)
-        self.profits += self.account * r
+        if self.is_active():
+            self.account *= (1 + r)
+            self.profits += self.account * r
 
     def hire(self, pop_level, new_wage, delta=1):
         self.workers[pop_level] += delta
@@ -94,8 +99,8 @@ class Firm(Historizor):
 
     def set_target_supply_and_price(self):
         """ Firm chooses supply and price depending on its previous profits, stock and margin """
-
-        # just in case: prev_profit = self.get_from_history('profits', -2, 0) if len(self.history) > 1 else 0
+        if not self.is_active():
+            self.supply_goal = 0
 
         # Compute basic values, before hiring
         production = self.workers_for(0) * self.adjusted_productivity()
@@ -279,7 +284,9 @@ class Firm(Historizor):
 
     def liquidate(self):
         """ Fires all employees, deletes all stock """
+        if not self.is_active():
+            pass
         for level in range(2):
             self.lab_demand[level] = 0
             self.fire_to_match_labor_demand_for(level)
-        self.stock = 0
+        self.active = False

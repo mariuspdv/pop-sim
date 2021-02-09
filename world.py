@@ -130,13 +130,10 @@ class World:
 
     def bankruptcies(self):
         """ Handles liquidating firms that run out of money to pay interests """
-        firms_still_alive = dict(self.firms)
         for firm in self.firms.values():
-            prev_sold = firm.get_from_history('sold', -1, 0)
-            if -(firm.account * self.INTEREST_RATE) > (prev_sold * firm.price):
+            prev_revenue = firm.get_from_history('revenue', -1, 0)
+            if -(firm.account * self.INTEREST_RATE) > prev_revenue:
                 firm.liquidate()
-                del firms_still_alive[firm.id_firm]
-        self.firms = firms_still_alive
 
     def set_target_supply_and_price(self):
         """ Each Firm defines its target production goal and price"""

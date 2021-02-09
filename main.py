@@ -68,7 +68,7 @@ pop_1 = BlueCollar(id_pop=1, goods=goods, needs=needs_1, population=30 * f, empl
 pop_2 = BlueCollar(id_pop=2, goods=goods, needs=needs_2, population=12 * f, employed=employ_2, savings=1)
 pop_3 = BlueCollar(id_pop=3, goods=goods, needs=needs_3, population=3 * f, employed=employ_3, savings=2)
 pop_4 = WhiteCollar(id_pop=4, goods=goods, needs=needs_4, population=5 * f, employed=employ_4, savings=0)
-pop_5 = Capitalist(id_pop=5, goods=goods, needs=needs_5, population=int(1 * f/10), employed={}, savings=3)
+pop_5 = Capitalist(id_pop=5, goods=goods, needs=needs_5, population=int(1 * f / 10), employed={}, savings=3)
 firms = [firm_1, firm_2, firm_3, firm_4, firm_5, firm_6]
 initial_shares = {1: 0, 2: 0, 3: 0, 4: 0, 5: 10}
 
