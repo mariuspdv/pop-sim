@@ -4,6 +4,7 @@ import random
 from blue_collar import BlueCollar
 from white_collar import WhiteCollar
 from capitalist import Capitalist
+from firm import Firm
 import math
 import numpy as np
 
@@ -134,6 +135,46 @@ class World:
             prev_revenue = firm.get_from_history('revenue', -1, 0)
             if -(firm.account * self.INTEREST_RATE) > prev_revenue:
                 firm.liquidate()
+
+    def firm_creation(self):
+        """ Creates new firms if need be """
+        # for each market, randomly create new firm with probability:
+        # - =1 if no active firm on the market
+        # - growing with profits in market
+        # - growing with latent unsatisfied demand
+        # - growing with overall capitalist (only?) savings
+        def create_firm(good):
+            # TODO: combien d'employés pour commencer?
+            quality = random.uniform(-0.1, 0.1)
+            av_b_wage = sum([firm.wages_of(0) * firm.workers_for(0) for firm in list_of_firms]) / sum([firm.workers_for(0) for firm in list_of_firms])
+            av_w_wage = sum([firm.wages_of(1) * firm.workers_for(1) for firm in list_of_firms]) / sum([firm.workers_for(1) for firm in list_of_firms])
+            av_productivity = sum([firm.productivity for firm in list_of_firms]) / len(list_of_firms)
+            new_firm = Firm(id_firm=max(firm.id_firm for firm in self.firms.values())+1, product=good,
+                            blue_wages=av_b_wage*(1+quality), white_wages=av_w_wage*(1+quality),
+                            productivity=av_productivity*(1+quality))
+            new_firm.new_firm = True
+            new_firm.set_world(self)
+            self.firms[new_firm.id_firm] = new_firm
+            for pop in self.pops.values():
+                pop.employed[new_firm.id_firm] = 0
+            print(f'Firm producing {good} created')
+
+        firms_by_good = {good: [firm for firm in self.firms.values() if (good == firm.product and firm.is_active())]
+                         for good in self.goods}
+        for good, list_of_firms in firms_by_good.items():
+            if len(list_of_firms) == 0:
+                create_firm(good)
+            else:
+                p = 0.01
+                if sum([firm.get_from_history('profits', -1, 0) for firm in list_of_firms]) > 0:
+                    p += 0.03
+                elif sum([firm.get_from_history('profits', -1, 0) for firm in list_of_firms]) < 0:
+                    p -= 0.01
+                # TODO: ajouter la demande latente et les savings des capitalistes
+                p = min(p, 0.005)
+                x = random.uniform(0, 1)
+                if x < p:
+                    create_firm(good)
 
     def set_target_supply_and_price(self):
         """ Each Firm defines its target production goal and price"""
@@ -353,6 +394,7 @@ class World:
         self.start_period()
 
         self.bankruptcies()
+        self.firm_creation()
 
         # Firms set their target production goals and price
         self.set_target_supply_and_price()

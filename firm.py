@@ -22,6 +22,7 @@ class Firm(Historizor):
         self.id_firm = id_firm
         self.product = product
         self.active = True
+        self.new_firm = False
         self.workers = {0: 0, 1: 0}
         self.wages = {0: blue_wages, 1: white_wages}
         self.productivity = productivity
@@ -147,6 +148,8 @@ class Firm(Historizor):
         raise "Devrait pas arriver là"
 
     def set_blue_labor_demand(self):
+        if self.new_firm:
+            self.lab_demand[0] = 100
         productivity = self.adjusted_productivity()
         max_supply = self.workers_for(0) * productivity
         if self.supply_goal > max_supply:
@@ -160,6 +163,10 @@ class Firm(Historizor):
         self.lab_demand[0] = lab_demand
 
     def set_white_labor_demand(self):
+        # TODO: revoir de nouveau, ça a l'air de mal marcher, chute des salaires  précipitée
+        if self.new_firm:
+            self.lab_demand[1] = 10
+            self.new_firm = False
         ideal_demand = self.workers[0] * (self.WHITE_RATIO / (1 - self.WHITE_RATIO))
         current_white_workforce = self.workers_for(1)
         # If we plan to fire people, let's do it
