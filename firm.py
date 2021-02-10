@@ -292,7 +292,7 @@ class Firm(Historizor):
     def liquidate(self):
         """ Fires all employees, deletes all stock """
         if not self.is_active():
-            pass
+            return
         for level in range(2):
             self.lab_demand[level] = 0
             self.fire_to_match_labor_demand_for(level)

@@ -41,7 +41,8 @@ class World:
         self.inflation = 0
 
         # Technical logistics
-        self.history = []
+        self.time = 0
+        self.history = {}
 
     def get_pops(self):
         return self.pops
@@ -49,10 +50,10 @@ class World:
     def add_to_history(self):
         """ Historicize World indicators. Cascades to Firms and Pops"""
         for firm in self.firms.values():
-            firm.add_to_history()
+            firm.add_to_history(self.time)
         for pop in self.pops.values():
-            pop.add_to_history()
-        self.history.append({k: self.__getattribute__(k) for k in self.TO_HISTORIZE})
+            pop.add_to_history(self.time)
+        self.history[self.time] = {k: self.__getattribute__(k) for k in self.TO_HISTORIZE}
 
     def compute_tot_population(self):
         """ Compute total population"""
@@ -389,6 +390,7 @@ class World:
             firm.end_period()
         for pop in self.pops.values():
             pop.end_period()
+        self.time += 1
 
     def tick(self):
         self.start_period()
@@ -430,7 +432,7 @@ class World:
         to_display = {'tot_population', 'unemployment_rate', 'gdp', 'gdp_per_capita', 'price_level',
                       'indexed_price_level', 'inflation', 'adjusted_gdp'}
         full_table = []
-        for i in range(0, len(self.history)):
+        for i in sorted(self.history.keys()):
             at_i = self.history[i]
             d = {'t': i}
             d.update({k: at_i[k] for k in to_display})
@@ -441,8 +443,10 @@ class World:
                             "capital"}:
                     d[f"{firm_name}_{key}"] = firm.get_from_history(key, i)
                 for pop_level in range(2):
-                    d[f"{firm_name}_workers_{pop_level}"] = firm.get_from_history('workers', i)[pop_level]
-                    d[f"{firm_name}_wages_{pop_level}"] = firm.get_from_history('wages', i)[pop_level]
+                    workers = firm.get_from_history('workers', i)
+                    wages = firm.get_from_history('wages', i)
+                    d[f"{firm_name}_workers_{pop_level}"] = workers[pop_level] if workers is not None else None
+                    d[f"{firm_name}_wages_{pop_level}"] = wages[pop_level] if wages is not None else None
 
             for id_pop, pop in self.pops.items():
                 pop_name = f"pop{id_pop}"
@@ -481,7 +485,7 @@ class World:
                     'ratio_needs_prod': ratio_needs_prod,
                     'ratio_needs_prod_01': ratio_needs_prod_01}
         to_display = {'unemployment_rate', 'gdp', 'gdp_per_capita', 'indexed_price_level', 'adjusted_gdp'}
-        at_i = self.history[-1]
+        at_i = self.history[max(self.history.keys())]
         analysis.update({k: at_i[k] for k in to_display})
 
         wages = [sum(firm.wages_of(i) * firm.workers_for(i) for firm in self.firms.values()) for i in range(2)]
