@@ -78,7 +78,7 @@ world = World(goods=goods,
               depositary={id_firm: initial_shares for id_firm in range(1, len(firms) + 1)}
               )
 
-for i in range(200):
+for i in range(1000):
     world.tick()
 
 full_table = world.export()

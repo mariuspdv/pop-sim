@@ -134,8 +134,9 @@ class World:
         """ Handles liquidating firms that run out of money to pay interests """
         for firm in self.firms.values():
             prev_revenue = firm.get_from_history('revenue', -1, 0)
-            if -(firm.account * self.INTEREST_RATE) > prev_revenue:
+            if -(firm.account * self.INTEREST_RATE) > prev_revenue and firm.is_active():
                 firm.liquidate()
+                print(f'Firm {firm.id_firm} died')
 
     def firm_creation(self):
         """ Creates new firms if need be """
@@ -145,17 +146,22 @@ class World:
         # - growing with latent unsatisfied demand
         # - growing with overall capitalist (only?) savings
         def create_firm(good):
-            # TODO: combien d'employés pour commencer?
+            # TODO: combien d'employés pour commencer, d'où vient l'argent, et average blue and white wages pas bien
             quality = random.uniform(-0.1, 0.1)
-            av_b_wage = sum([firm.wages_of(0) * firm.workers_for(0) for firm in list_of_firms]) / sum([firm.workers_for(0) for firm in list_of_firms])
-            av_w_wage = sum([firm.wages_of(1) * firm.workers_for(1) for firm in list_of_firms]) / sum([firm.workers_for(1) for firm in list_of_firms])
-            av_productivity = sum([firm.productivity for firm in list_of_firms]) / len(list_of_firms)
+            av_b_wage = sum([firm.wages_of(0) * firm.workers_for(0) for firm in list_of_firms]) / sum([firm.workers_for(0) for firm in list_of_firms]) \
+                if len(list_of_firms) != 0 else 1
+            av_w_wage = sum([firm.wages_of(1) * firm.workers_for(1) for firm in list_of_firms]) / sum([firm.workers_for(1) for firm in list_of_firms]) \
+                if len(list_of_firms) != 0 else 1
+            all_firms_good = [firm for firm in self.firms.values() if firm.product == good]
+            av_productivity = sum([firm.productivity for firm in all_firms_good]) / len(all_firms_good)
             new_firm = Firm(id_firm=max(firm.id_firm for firm in self.firms.values())+1, product=good,
                             blue_wages=av_b_wage*(1+quality), white_wages=av_w_wage*(1+quality),
                             productivity=av_productivity*(1+quality))
             new_firm.new_firm = True
             new_firm.set_world(self)
+            new_firm.price = new_firm.wages_of(0) / new_firm.productivity * (1 + new_firm.target_margin)
             self.firms[new_firm.id_firm] = new_firm
+            self.depositary[new_firm.id_firm] = {pop.id_pop: (10 if type(pop) is Capitalist else 0) for pop in self.pops.values()}
             for pop in self.pops.values():
                 pop.employed[new_firm.id_firm] = 0
             print(f'Firm producing {good} created')
