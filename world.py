@@ -121,6 +121,44 @@ class World:
             e.g. how many people could my economy feed and clothe? """
         self.adjusted_gdp = self.gdp / self.price_level
 
+    def compute_cum_needs(self, level=2):
+        """ Sum of all the needs of everyone up to a certain level """
+        cumulated_needs = GoodsVector(self.goods)
+        for pop in self.pops.values():
+            cumulated_needs += pop.cumulated_needs({l for l in range(level + 1)})
+        return cumulated_needs
+
+    def compute_production_capacity(self):
+        """ Sum of all production in a period for each good """
+        prod_capacity = GoodsVector(self.goods)
+        for firm in self.firms.values():
+            productivity = firm.adjusted_productivity()
+            good = firm.product
+            prod_capacity[good] += firm.workers_for(0) * productivity
+        return prod_capacity
+
+    def compute_ratio_needs(self, level=2):
+        """ Finds how much of the cumulated needs up to a level
+            can be satisfied by actual production """
+        ratio_needs_prod = GoodsVector(self.goods)
+        cum_needs = self.compute_cum_needs(level)
+        prod_capacity = self.compute_production_capacity()
+        for good in self.goods:
+            ratio_needs_prod[good] = prod_capacity[good] / cum_needs[good]
+        return ratio_needs_prod
+
+    def compute_average_wage(self, pop_type, good):
+        """ Computes the average wage for a certain Pop type in a certain set of markets """
+        list_of_firms = []
+        for firm in self.firms.values():
+            if firm.product in good:
+                list_of_firms.append(firm)
+        total_wages = sum([firm.wages_of(pop_type) * firm.workers_for(pop_type) for firm in list_of_firms])
+        total_workers = sum([firm.workers_for(pop_type) for firm in list_of_firms])
+        if total_workers == 0:
+            return 0
+        return total_wages / total_workers
+
     def compute_aggregates(self):
         """ Compute aggregated indicators """
         self.compute_tot_population()
@@ -136,7 +174,7 @@ class World:
             prev_revenue = firm.get_from_history('revenue', -1, 0)
             if -(firm.account * self.INTEREST_RATE) > prev_revenue and firm.is_active():
                 firm.liquidate()
-                print(f'Firm {firm.id_firm} died')
+                print(f'Firm {firm.id_firm} producing {firm.product} died')
 
     def firm_creation(self):
         """ Creates new firms if need be """
@@ -146,12 +184,14 @@ class World:
         # - growing with latent unsatisfied demand
         # - growing with overall capitalist (only?) savings
         def create_firm(good):
-            # TODO: combien d'employés pour commencer, d'où vient l'argent, et average blue and white wages pas bien
+            # TODO: combien d'employés pour commencer, d'où vient l'argent
             quality = random.uniform(-0.1, 0.1)
-            av_b_wage = sum([firm.wages_of(0) * firm.workers_for(0) for firm in list_of_firms]) / sum([firm.workers_for(0) for firm in list_of_firms]) \
-                if len(list_of_firms) != 0 else 1
-            av_w_wage = sum([firm.wages_of(1) * firm.workers_for(1) for firm in list_of_firms]) / sum([firm.workers_for(1) for firm in list_of_firms]) \
-                if len(list_of_firms) != 0 else 1
+            av_b_wage = self.compute_average_wage(0, good)
+            if av_b_wage == 0:
+                av_b_wage = self.compute_average_wage(0, self.goods)
+            av_w_wage = self.compute_average_wage(1, good)
+            if av_w_wage == 0:
+                av_w_wage = self.compute_average_wage(1, self.goods)
             all_firms_good = [firm for firm in self.firms.values() if firm.product == good]
             av_productivity = sum([firm.productivity for firm in all_firms_good]) / len(all_firms_good)
             new_firm = Firm(id_firm=max(firm.id_firm for firm in self.firms.values())+1, product=good,
@@ -172,13 +212,14 @@ class World:
             if len(list_of_firms) == 0:
                 create_firm(good)
             else:
-                p = 0.01
+                p = 0.001
                 if sum([firm.get_from_history('profits', -1, 0) for firm in list_of_firms]) > 0:
-                    p += 0.03
+                    p += 0.003
                 elif sum([firm.get_from_history('profits', -1, 0) for firm in list_of_firms]) < 0:
-                    p -= 0.01
-                # TODO: ajouter la demande latente et les savings des capitalistes
-                p = min(p, 0.005)
+                    p -= 0.003
+                # TODO: ajouter les savings des capitalistes
+                p += (1 - self.compute_ratio_needs(1)[good]) / 100
+                p = max(p, 0.005)
                 x = random.uniform(0, 1)
                 if x < p:
                     create_firm(good)
@@ -465,25 +506,13 @@ class World:
         return full_table
 
     def high_level_analysis(self):
-        cum_needs = GoodsVector(self.goods)
-        cum_needs01 = GoodsVector(self.goods)
-        for pop in self.pops.values():
-            cum_needs += pop.cumulated_needs()
-            cum_needs01 += pop.cumulated_needs({0, 1})
+        cum_needs = self.compute_cum_needs()
+        cum_needs01 = self.compute_cum_needs(1)
 
-        prod_capacity = GoodsVector(self.goods)
-        for firm in self.firms.values():
-            bc = firm.workers_for(0)
-            productivity = firm.adjusted_productivity()
-            good = firm.product
-            # print(firm.id_firm, bc, good, productivity, bc * productivity)
-            prod_capacity[good] += bc * productivity
+        prod_capacity = self.compute_production_capacity()
 
-        ratio_needs_prod = GoodsVector(self.goods)
-        ratio_needs_prod_01 = GoodsVector(self.goods)
-        for good in self.goods:
-            ratio_needs_prod[good] = prod_capacity[good] / cum_needs[good]
-            ratio_needs_prod_01[good] = prod_capacity[good] / cum_needs01[good]
+        ratio_needs_prod = self.compute_ratio_needs()
+        ratio_needs_prod_01 = self.compute_ratio_needs(1)
 
         analysis = {'cumulated_needs_01': cum_needs01,
                     'cumulated_needs': cum_needs,
