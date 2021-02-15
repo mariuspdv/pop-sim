@@ -210,6 +210,7 @@ class World:
                         investment += 1000
                     self.depositary[new_firm.id_firm][pop.id_pop] = investment
                     pop.savings -= investment
+                    new_firm.account += investment
             print(f'Firm producing {good} created')
 
         firms_by_good = {good: [firm for firm in self.firms.values() if (good == firm.product and firm.is_active())]
