@@ -184,7 +184,7 @@ class World:
         # - growing with latent unsatisfied demand
         # - growing with overall capitalist (only?) savings
         def create_firm(good):
-            # TODO: combien d'employés pour commencer, d'où vient l'argent
+            # TODO: combien d'employés pour commencer
             quality = random.uniform(-0.1, 0.1)
             av_b_wage = self.compute_average_wage(0, good)
             if av_b_wage == 0:
@@ -201,9 +201,15 @@ class World:
             new_firm.set_world(self)
             new_firm.price = new_firm.wages_of(0) / new_firm.productivity * (1 + new_firm.target_margin)
             self.firms[new_firm.id_firm] = new_firm
-            self.depositary[new_firm.id_firm] = {pop.id_pop: (10 if type(pop) is Capitalist else 0) for pop in self.pops.values()}
+            self.depositary[new_firm.id_firm] = {pop.id_pop: 0 for pop in self.pops.values()}
             for pop in self.pops.values():
                 pop.employed[new_firm.id_firm] = 0
+                if pop.savings > 0:
+                    investment = pop.savings * pop.investment_propensity
+                    if pop is Capitalist and pop.savings * (1 - pop.investment_propensity) > 1000:
+                        investment += 1000
+                    self.depositary[new_firm.id_firm][pop.id_pop] = investment
+                    pop.savings -= investment
             print(f'Firm producing {good} created')
 
         firms_by_good = {good: [firm for firm in self.firms.values() if (good == firm.product and firm.is_active())]
@@ -214,12 +220,14 @@ class World:
             else:
                 p = 0.001
                 if sum([firm.get_from_history('profits', -1, 0) for firm in list_of_firms]) > 0:
-                    p += 0.003
+                    p += (1 - self.compute_ratio_needs(1)[good]) / 100
                 elif sum([firm.get_from_history('profits', -1, 0) for firm in list_of_firms]) < 0:
                     p -= 0.003
-                # TODO: ajouter les savings des capitalistes
-                p += (1 - self.compute_ratio_needs(1)[good]) / 100
-                p = max(p, 0.005)
+                for pop in self.pops.values():
+                    if pop is Capitalist and pop.savings > 1000:
+                        p += 0.001
+                        break
+                p = max(p, 0.001)
                 x = random.uniform(0, 1)
                 if x < p:
                     create_firm(good)
