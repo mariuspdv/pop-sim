@@ -11,7 +11,7 @@ def summary_plot():
     fig.add_trace(go.Scatter(x=df['t'], y=df['unemployment_rate']), row=1, col=1)
     fig.add_trace(go.Scatter(x=df['t'], y=df['gdp']), row=1, col=2)
     fig.add_trace(go.Scatter(x=df['t'], y=df['indexed_price_level']), row=2, col=1)
-    fig.add_trace(go.Scatter(x=df['adjusted_gdp'][1:], y=df['inflation'][1:], mode='markers'), row=2, col=2)
+    fig.add_trace(go.Scatter(x=df['average_needs_ratio'][1:], y=df['inflation'][1:], mode='markers'), row=2, col=2)
     fig.update_layout(height=2500, width=3500, title_text="Economic Analysis")
 
     fig.show()

@@ -11,7 +11,7 @@ import numpy as np
 
 class World:
     TO_HISTORIZE = {'tot_population', 'unemployment_rate', 'gdp', 'gdp_per_capita',
-                    'price_level', 'indexed_price_level', 'inflation', 'adjusted_gdp'}
+                    'price_level', 'indexed_price_level', 'inflation', 'adjusted_gdp', 'average_needs_ratio'}
     INTEREST_RATE = 0.01
 
     def __init__(self, goods, firms, pops, depositary):
@@ -39,6 +39,7 @@ class World:
         self.initial_price_level = None
         self.indexed_price_level = None
         self.inflation = 0
+        self.average_needs_ratio = 0
 
         # Technical logistics
         self.time = 0
@@ -147,6 +148,11 @@ class World:
             ratio_needs_prod[good] = prod_capacity[good] / cum_needs[good]
         return ratio_needs_prod
 
+    def compute_average_needs_ratio(self):
+        """ Average fulfillment of non-luxury needs """
+        ratio = self.compute_ratio_needs()
+        self.average_needs_ratio = (ratio['food'] + ratio['clothes'] + ratio['lodging']) / 3
+
     def compute_average_wage(self, pop_type, good):
         """ Computes the average wage for a certain Pop type in a certain set of markets """
         list_of_firms = []
@@ -167,6 +173,7 @@ class World:
         self.compute_gdp_per_capita()
         self.compute_price_level()
         self.compute_adjusted_gdp()
+        self.compute_average_needs_ratio()
 
     def bankruptcies(self):
         """ Handles liquidating firms that run out of money to pay interests """
@@ -486,7 +493,7 @@ class World:
             return {f"{prefix}_{key}": value for key, value in a_dict.items()}
 
         to_display = {'tot_population', 'unemployment_rate', 'gdp', 'gdp_per_capita', 'price_level',
-                      'indexed_price_level', 'inflation', 'adjusted_gdp'}
+                      'indexed_price_level', 'inflation', 'adjusted_gdp', 'average_needs_ratio'}
         full_table = []
         for i in sorted(self.history.keys()):
             at_i = self.history[i]
