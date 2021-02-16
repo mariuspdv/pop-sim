@@ -5,6 +5,7 @@ from white_collar import WhiteCollar
 from capitalist import Capitalist
 from world import World
 from goodsvector import GoodsVector
+import plots
 
 
 def write_to_csv(file_name, data):
@@ -92,3 +93,4 @@ print("\nIdeal economy")
 for k, v in world.ideal_economy().items():
     print(k, ':', v)
 
+plots.summary_plot()
