@@ -5,6 +5,7 @@ from white_collar import WhiteCollar
 from capitalist import Capitalist
 from world import World
 from goodsvector import GoodsVector
+import plots
 
 
 def write_to_csv(file_name, data):
@@ -34,6 +35,11 @@ firm_2 = Firm(id_firm=2, product='lodging', blue_wages=1.21, white_wages=1.55, p
 firm_3 = Firm(id_firm=3, product='clothes', blue_wages=1.41, white_wages=1.52, productivity=2)
 firm_4 = Firm(id_firm=4, product='luxury', blue_wages=1, white_wages=1.3, productivity=0.5)
 firm_5 = Firm(id_firm=5, product='food', blue_wages=1.1, white_wages=1.69, productivity=3)
+firm_6 = Firm(id_firm=6, product='lodging', blue_wages=1.11, white_wages=1.35, productivity=3)
+firm_7 = Firm(id_firm=7, product='lodging', blue_wages=1.11, white_wages=1.35, productivity=3)
+firm_8 = Firm(id_firm=8, product='lodging', blue_wages=1.11, white_wages=1.35, productivity=3)
+firm_9 = Firm(id_firm=9, product='lodging', blue_wages=1.11, white_wages=1.35, productivity=3)
+
 needs_1 = [('food', 0, 0.6), ('lodging', 0, 0.5), ('clothes', 0, 0.2),
            ('food', 1, 0.2), ('lodging', 1, 0.2), ('clothes', 1, 0.6), ('luxury', 1, 0.05),
            ('luxury', 2, 10)]
@@ -49,10 +55,10 @@ needs_4 = [('food', 0, 0.8), ('lodging', 0, 0.7), ('clothes', 0, 0.6), ('luxury'
 needs_5 = [('food', 0, 0.8), ('lodging', 0, 0.7), ('clothes', 0, 1), ('luxury', 0, 1),
            ('food', 1, 0.4), ('lodging', 1, 0.6), ('clothes', 1, 0.6), ('luxury', 1, 2),
            ('luxury', 2, 10)]
-employ_1 = {1: 9, 2: 6, 3: 3, 4: 7, 5: 0}
-employ_2 = {1: 0, 2: 3, 3: 7, 4: 0, 5: 2}
-employ_3 = {1: 0, 2: 1, 3: 0, 4: 1, 5: 0}
-employ_4 = {1: 1, 2: 1, 3: 1, 4: 0, 5: 0}
+employ_1 = {1: 7, 2: 6, 3: 6, 4: 4, 5: 2, 6: 1}
+employ_2 = {1: 0, 2: 3, 3: 7, 4: 0, 5: 2, 6: 0}
+employ_3 = {1: 0, 2: 1, 3: 0, 4: 1, 5: 0, 6: 0}
+employ_4 = {1: 1, 2: 1, 3: 1, 4: 0, 5: 0, 6: 0}
 f = 1000
 employ_1 = {k: f * v for k, v in employ_1.items()}
 employ_2 = {k: f * v for k, v in employ_2.items()}
@@ -60,11 +66,11 @@ employ_3 = {k: f * v for k, v in employ_3.items()}
 employ_4 = {k: f * v for k, v in employ_4.items()}
 
 pop_1 = BlueCollar(id_pop=1, goods=goods, needs=needs_1, population=30 * f, employed=employ_1, savings=3)
-pop_2 = BlueCollar(id_pop=2, goods=goods, needs=needs_2, population=12 *f, employed=employ_2, savings=1)
+pop_2 = BlueCollar(id_pop=2, goods=goods, needs=needs_2, population=12 * f, employed=employ_2, savings=1)
 pop_3 = BlueCollar(id_pop=3, goods=goods, needs=needs_3, population=3 * f, employed=employ_3, savings=2)
 pop_4 = WhiteCollar(id_pop=4, goods=goods, needs=needs_4, population=5 * f, employed=employ_4, savings=0)
-pop_5 = Capitalist(id_pop=5, goods=goods, needs=needs_5, population=1, employed={}, savings=3)
-firms = [firm_1, firm_2, firm_3, firm_4, firm_5]
+pop_5 = Capitalist(id_pop=5, goods=goods, needs=needs_5, population=int(1 * f / 10), employed={}, savings=3)
+firms = [firm_1, firm_2, firm_3, firm_4, firm_5, firm_6]
 initial_shares = {1: 0, 2: 0, 3: 0, 4: 0, 5: 10}
 
 world = World(goods=goods,
@@ -73,7 +79,7 @@ world = World(goods=goods,
               depositary={id_firm: initial_shares for id_firm in range(1, len(firms) + 1)}
               )
 
-for i in range(200):
+for i in range(1000):
     world.tick()
 
 full_table = world.export()
@@ -87,3 +93,4 @@ print("\nIdeal economy")
 for k, v in world.ideal_economy().items():
     print(k, ':', v)
 
+plots.summary_plot()

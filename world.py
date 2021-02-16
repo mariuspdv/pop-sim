@@ -4,6 +4,7 @@ import random
 from blue_collar import BlueCollar
 from white_collar import WhiteCollar
 from capitalist import Capitalist
+from firm import Firm
 import math
 import numpy as np
 
@@ -40,7 +41,8 @@ class World:
         self.inflation = 0
 
         # Technical logistics
-        self.history = []
+        self.time = 0
+        self.history = {}
 
     def get_pops(self):
         return self.pops
@@ -48,10 +50,10 @@ class World:
     def add_to_history(self):
         """ Historicize World indicators. Cascades to Firms and Pops"""
         for firm in self.firms.values():
-            firm.add_to_history()
+            firm.add_to_history(self.time)
         for pop in self.pops.values():
-            pop.add_to_history()
-        self.history.append({k: self.__getattribute__(k) for k in self.TO_HISTORIZE})
+            pop.add_to_history(self.time)
+        self.history[self.time] = {k: self.__getattribute__(k) for k in self.TO_HISTORIZE}
 
     def compute_tot_population(self):
         """ Compute total population"""
@@ -119,6 +121,44 @@ class World:
             e.g. how many people could my economy feed and clothe? """
         self.adjusted_gdp = self.gdp / self.price_level
 
+    def compute_cum_needs(self, level=2):
+        """ Sum of all the needs of everyone up to a certain level """
+        cumulated_needs = GoodsVector(self.goods)
+        for pop in self.pops.values():
+            cumulated_needs += pop.cumulated_needs({l for l in range(level + 1)})
+        return cumulated_needs
+
+    def compute_production_capacity(self):
+        """ Sum of all production in a period for each good """
+        prod_capacity = GoodsVector(self.goods)
+        for firm in self.firms.values():
+            productivity = firm.adjusted_productivity()
+            good = firm.product
+            prod_capacity[good] += firm.workers_for(0) * productivity
+        return prod_capacity
+
+    def compute_ratio_needs(self, level=2):
+        """ Finds how much of the cumulated needs up to a level
+            can be satisfied by actual production """
+        ratio_needs_prod = GoodsVector(self.goods)
+        cum_needs = self.compute_cum_needs(level)
+        prod_capacity = self.compute_production_capacity()
+        for good in self.goods:
+            ratio_needs_prod[good] = prod_capacity[good] / cum_needs[good]
+        return ratio_needs_prod
+
+    def compute_average_wage(self, pop_type, good):
+        """ Computes the average wage for a certain Pop type in a certain set of markets """
+        list_of_firms = []
+        for firm in self.firms.values():
+            if firm.product in good:
+                list_of_firms.append(firm)
+        total_wages = sum([firm.wages_of(pop_type) * firm.workers_for(pop_type) for firm in list_of_firms])
+        total_workers = sum([firm.workers_for(pop_type) for firm in list_of_firms])
+        if total_workers == 0:
+            return 0
+        return total_wages / total_workers
+
     def compute_aggregates(self):
         """ Compute aggregated indicators """
         self.compute_tot_population()
@@ -127,6 +167,71 @@ class World:
         self.compute_gdp_per_capita()
         self.compute_price_level()
         self.compute_adjusted_gdp()
+
+    def bankruptcies(self):
+        """ Handles liquidating firms that run out of money to pay interests """
+        for firm in self.firms.values():
+            prev_revenue = firm.get_from_history('revenue', -1, 0)
+            if -(firm.account * self.INTEREST_RATE) > prev_revenue and firm.is_active():
+                firm.liquidate()
+                print(f'Firm {firm.id_firm} producing {firm.product} died')
+
+    def firm_creation(self):
+        """ Creates new firms if need be """
+        # for each market, randomly create new firm with probability:
+        # - =1 if no active firm on the market
+        # - growing with profits in market
+        # - growing with latent unsatisfied demand
+        # - growing with overall capitalist (only?) savings
+        def create_firm(good):
+            # TODO: combien d'employés pour commencer
+            quality = random.uniform(-0.1, 0.1)
+            av_b_wage = self.compute_average_wage(0, good)
+            if av_b_wage == 0:
+                av_b_wage = self.compute_average_wage(0, self.goods)
+            av_w_wage = self.compute_average_wage(1, good)
+            if av_w_wage == 0:
+                av_w_wage = self.compute_average_wage(1, self.goods)
+            all_firms_good = [firm for firm in self.firms.values() if firm.product == good]
+            av_productivity = sum([firm.productivity for firm in all_firms_good]) / len(all_firms_good)
+            new_firm = Firm(id_firm=max(firm.id_firm for firm in self.firms.values())+1, product=good,
+                            blue_wages=av_b_wage*(1+quality), white_wages=av_w_wage*(1+quality),
+                            productivity=av_productivity*(1+quality))
+            new_firm.new_firm = True
+            new_firm.set_world(self)
+            new_firm.price = new_firm.wages_of(0) / new_firm.productivity * (1 + new_firm.target_margin)
+            self.firms[new_firm.id_firm] = new_firm
+            self.depositary[new_firm.id_firm] = {pop.id_pop: 0 for pop in self.pops.values()}
+            for pop in self.pops.values():
+                pop.employed[new_firm.id_firm] = 0
+                if pop.savings > 0:
+                    investment = pop.savings * pop.investment_propensity
+                    if pop is Capitalist and pop.savings * (1 - pop.investment_propensity) > 1000:
+                        investment += 1000
+                    self.depositary[new_firm.id_firm][pop.id_pop] = investment
+                    pop.savings -= investment
+                    new_firm.account += investment
+            print(f'Firm producing {good} created')
+
+        firms_by_good = {good: [firm for firm in self.firms.values() if (good == firm.product and firm.is_active())]
+                         for good in self.goods}
+        for good, list_of_firms in firms_by_good.items():
+            if len(list_of_firms) == 0:
+                create_firm(good)
+            else:
+                p = 0.001
+                if sum([firm.get_from_history('profits', -1, 0) for firm in list_of_firms]) > 0:
+                    p += (1 - self.compute_ratio_needs(1)[good]) / 100
+                elif sum([firm.get_from_history('profits', -1, 0) for firm in list_of_firms]) < 0:
+                    p -= 0.003
+                for pop in self.pops.values():
+                    if pop is Capitalist and pop.savings > 1000:
+                        p += 0.001
+                        break
+                p = max(p, 0.001)
+                x = random.uniform(0, 1)
+                if x < p:
+                    create_firm(good)
 
     def set_target_supply_and_price(self):
         """ Each Firm defines its target production goal and price"""
@@ -341,9 +446,13 @@ class World:
             firm.end_period()
         for pop in self.pops.values():
             pop.end_period()
+        self.time += 1
 
     def tick(self):
         self.start_period()
+
+        self.bankruptcies()
+        self.firm_creation()
 
         # Firms set their target production goals and price
         self.set_target_supply_and_price()
@@ -379,7 +488,7 @@ class World:
         to_display = {'tot_population', 'unemployment_rate', 'gdp', 'gdp_per_capita', 'price_level',
                       'indexed_price_level', 'inflation', 'adjusted_gdp'}
         full_table = []
-        for i in range(0, len(self.history)):
+        for i in sorted(self.history.keys()):
             at_i = self.history[i]
             d = {'t': i}
             d.update({k: at_i[k] for k in to_display})
@@ -390,8 +499,10 @@ class World:
                             "capital"}:
                     d[f"{firm_name}_{key}"] = firm.get_from_history(key, i)
                 for pop_level in range(2):
-                    d[f"{firm_name}_workers_{pop_level}"] = firm.get_from_history('workers', i)[pop_level]
-                    d[f"{firm_name}_wages_{pop_level}"] = firm.get_from_history('wages', i)[pop_level]
+                    workers = firm.get_from_history('workers', i)
+                    wages = firm.get_from_history('wages', i)
+                    d[f"{firm_name}_workers_{pop_level}"] = workers[pop_level] if workers is not None else None
+                    d[f"{firm_name}_wages_{pop_level}"] = wages[pop_level] if wages is not None else None
 
             for id_pop, pop in self.pops.items():
                 pop_name = f"pop{id_pop}"
@@ -404,25 +515,13 @@ class World:
         return full_table
 
     def high_level_analysis(self):
-        cum_needs = GoodsVector(self.goods)
-        cum_needs01 = GoodsVector(self.goods)
-        for pop in self.pops.values():
-            cum_needs += pop.cumulated_needs()
-            cum_needs01 += pop.cumulated_needs({0, 1})
+        cum_needs = self.compute_cum_needs()
+        cum_needs01 = self.compute_cum_needs(1)
 
-        prod_capacity = GoodsVector(self.goods)
-        for firm in self.firms.values():
-            bc = firm.workers_for(0)
-            productivity = firm.adjusted_productivity()
-            good = firm.product
-            # print(firm.id_firm, bc, good, productivity, bc * productivity)
-            prod_capacity[good] += bc * productivity
+        prod_capacity = self.compute_production_capacity()
 
-        ratio_needs_prod = GoodsVector(self.goods)
-        ratio_needs_prod_01 = GoodsVector(self.goods)
-        for good in self.goods:
-            ratio_needs_prod[good] = prod_capacity[good] / cum_needs[good]
-            ratio_needs_prod_01[good] = prod_capacity[good] / cum_needs01[good]
+        ratio_needs_prod = self.compute_ratio_needs()
+        ratio_needs_prod_01 = self.compute_ratio_needs(1)
 
         analysis = {'cumulated_needs_01': cum_needs01,
                     'cumulated_needs': cum_needs,
@@ -430,7 +529,7 @@ class World:
                     'ratio_needs_prod': ratio_needs_prod,
                     'ratio_needs_prod_01': ratio_needs_prod_01}
         to_display = {'unemployment_rate', 'gdp', 'gdp_per_capita', 'indexed_price_level', 'adjusted_gdp'}
-        at_i = self.history[-1]
+        at_i = self.history[max(self.history.keys())]
         analysis.update({k: at_i[k] for k in to_display})
 
         wages = [sum(firm.wages_of(i) * firm.workers_for(i) for firm in self.firms.values()) for i in range(2)]

@@ -4,7 +4,7 @@ from goodsvector import GoodsVector
 
 class Pop(Historizor):
 
-    def __init__(self, id_pop, pop_type, goods, needs, population, employed, savings, thrift):
+    def __init__(self, id_pop, pop_type, goods, needs, population, employed, savings, thrift, investment_propensity):
         super().__init__()
         self.id_pop = id_pop
         self.pop_type = pop_type
@@ -22,6 +22,7 @@ class Pop(Historizor):
 
         self.available_income = self.income
         self.thrift = thrift
+        self.investment_propensity = investment_propensity
         self._world = None
 
     def __str__(self):
@@ -99,14 +100,15 @@ class Pop(Historizor):
 
         # If lack of money, compute the proportion of the increment bought...
         if self.income < (price * qty):
-            # ... except if basic need, in which case use savings (or borrow, no constraints atm)
+            # ... except if basic need, in which case use savings (or borrow, added small constraint)
             if level == 0:
-                from_savings = (price * qty) - self.income
-                from_income = self.income
-                self.savings -= from_savings
-                self.income -= from_income
-                self.consumption[good] += qty
-                return 1
+                if -(self.savings * 0.1) < self.available_income:
+                    from_savings = (price * qty) - self.income
+                    from_income = self.income
+                    self.savings -= from_savings
+                    self.income -= from_income
+                    self.consumption[good] += qty
+                    return 1
             # Accounting
             discount = self.income / (price * qty)
 

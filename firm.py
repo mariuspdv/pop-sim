@@ -21,13 +21,14 @@ class Firm(Historizor):
         super().__init__()
         self.id_firm = id_firm
         self.product = product
+        self.active = True
+        self.new_firm = False
         self.workers = {0: 0, 1: 0}
         self.wages = {0: blue_wages, 1: white_wages}
         self.productivity = productivity
         self.supply_goal = 0
         self.lab_demand = {0: 0, 1: 0}
 
-        #self.supply = 0
         self.revenue = 0
         self.sold = 0
 
@@ -59,6 +60,9 @@ class Firm(Historizor):
         self.price = (sum(self.wages[i] * self.workers[i] for i in range(2))) \
                      / (self.workers_for(0) * self.adjusted_productivity()) * (1 + self.target_margin)
 
+    def is_active(self):
+        return self.active
+
     def workers_for(self, pop_level):
         return self.workers[pop_level]
 
@@ -84,8 +88,9 @@ class Firm(Historizor):
         self.profits = 0
 
     def add_interest(self, r):
-        self.account *= (1 + r)
-        self.profits += self.account * r
+        if self.is_active():
+            self.account *= (1 + r)
+            self.profits += self.account * r
 
     def hire(self, pop_level, new_wage, delta=1):
         self.workers[pop_level] += delta
@@ -95,8 +100,8 @@ class Firm(Historizor):
 
     def set_target_supply_and_price(self):
         """ Firm chooses supply and price depending on its previous profits, stock and margin """
-
-        # just in case: prev_profit = self.get_from_history('profits', -2, 0) if len(self.history) > 1 else 0
+        if not self.is_active():
+            self.supply_goal = 0
 
         # Compute basic values, before hiring
         production = self.workers_for(0) * self.adjusted_productivity()
@@ -143,34 +148,42 @@ class Firm(Historizor):
         raise "Devrait pas arriver là"
 
     def set_blue_labor_demand(self):
-        productivity = self.adjusted_productivity()
-        max_supply = self.workers_for(0) * productivity
-        if self.supply_goal > max_supply:
-            lab_demand = math.ceil(self.supply_goal / productivity)
-        # Firm fires if under production capacity and no savings, as long as firing still leaves desired
-        # output possible and at least 1 worker (no dying firm yet).
-        elif self.supply_goal < max_supply and self.workers_for(0) > 1 and self.account <= 0:
-            lab_demand = math.ceil(self.supply_goal / productivity)
+        if self.new_firm:
+            self.lab_demand[0] = 100
         else:
-            lab_demand = self.workers_for(0)
-        self.lab_demand[0] = lab_demand
+            productivity = self.adjusted_productivity()
+            max_supply = self.workers_for(0) * productivity
+            if self.supply_goal > max_supply:
+                lab_demand = math.ceil(self.supply_goal / productivity)
+            # Firm fires if under production capacity and no savings, as long as firing still leaves desired
+            # output possible and at least 1 worker (no dying firm yet).
+            elif self.supply_goal < max_supply and self.workers_for(0) > 1 and self.account <= 0:
+                lab_demand = math.ceil(self.supply_goal / productivity)
+            else:
+                lab_demand = self.workers_for(0)
+            self.lab_demand[0] = lab_demand
 
     def set_white_labor_demand(self):
-        ideal_demand = self.workers[0] * (self.WHITE_RATIO / (1 - self.WHITE_RATIO))
-        current_white_workforce = self.workers_for(1)
-        # If we plan to fire people, let's do it
-        if ideal_demand <= current_white_workforce:
-            self.lab_demand[1] = int(ideal_demand)
-            return
-        # if not, value the productivity boost at the sales price and check with the salary level.
-        # We should take the "market" salary I think, but let's start with the salary we know
-        delta_prod_value = self.marginal_white_worker_production() * self.price
-        if delta_prod_value > self.wages_of(1):
-            # Try to hire
-            self.lab_demand[1] = int(ideal_demand)
+        # TODO: revoir de nouveau, ça a l'air de mal marcher, chute des salaires  précipitée
+        if self.new_firm:
+            self.lab_demand[1] = 10
+            self.new_firm = False
         else:
-            # do nothing
-            self.lab_demand[1] = current_white_workforce
+            ideal_demand = self.workers[0] * (self.WHITE_RATIO / (1 - self.WHITE_RATIO))
+            current_white_workforce = self.workers_for(1)
+            # If we plan to fire people, let's do it
+            if ideal_demand <= current_white_workforce:
+                self.lab_demand[1] = int(ideal_demand)
+                return
+            # if not, value the productivity boost at the sales price and check with the salary level.
+            # We should take the "market" salary I think, but let's start with the salary we know
+            delta_prod_value = self.marginal_white_worker_production() * self.price
+            if delta_prod_value > self.wages_of(1):
+                # Try to hire
+                self.lab_demand[1] = int(ideal_demand)
+            else:
+                # do nothing
+                self.lab_demand[1] = current_white_workforce
 
     def set_labor_demand_for(self, pop_level):
         if pop_level == 0:
@@ -277,3 +290,12 @@ class Firm(Historizor):
         else:
             # self.account += self.profits
             self.dividends = 0
+
+    def liquidate(self):
+        """ Fires all employees, deletes all stock """
+        if not self.is_active():
+            return
+        for level in range(2):
+            self.lab_demand[level] = 0
+            self.fire_to_match_labor_demand_for(level)
+        self.active = False
