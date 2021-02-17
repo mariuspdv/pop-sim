@@ -22,17 +22,19 @@ def summary_plot():
 def plot_on_command():
     """ Makes the plots that you want to see """
     df = pd.read_csv('export_run.csv')
-    df.head()
 
     x = 'no'
 
     while x != 'yes':
-        series = input("What do you want to see?"
-                       "")
+        series = input("What do you want to see?").lower()
+        end = {"nothing", "none", "stop", "no"}
 
-        if series in {"nothing", "none", "stop", "no"}:
+        if series in end:
             break
+        elif series not in df.columns:
+            print("Sorry, I don't have that. Please try something else.")
+            continue
         else:
             fig = px.line(df, x='t', y=series, title=f'{series} over time')
             fig.show()
-            x = input("Is that all?")
+            x = input("Is that all?").lower()
