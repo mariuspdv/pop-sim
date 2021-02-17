@@ -79,7 +79,7 @@ world = World(goods=goods,
               depositary={id_firm: initial_shares for id_firm in range(1, len(firms) + 1)}
               )
 
-for i in range(1000):
+for i in range(200):
     world.tick()
 
 full_table = world.export()
@@ -94,3 +94,4 @@ for k, v in world.ideal_economy().items():
     print(k, ':', v)
 
 plots.summary_plot()
+plots.plot_on_command()
