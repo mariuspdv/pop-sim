@@ -4,7 +4,7 @@ author: "Marius Poudevigne"
 date: "13/03/2021"
 output: 
     epuRate::epurate:
-        toc: FALSE
+        toc: TRUE
         number_sections: FALSE
         code_folding: "show"
 ---
@@ -12,19 +12,17 @@ output:
 ```{r setup, include=FALSE}
 knitr::opts_chunk$set(echo = TRUE)
 ```
-# About {.tabset .tabset-fade .tabset-pills}
+# {.tabset .tabset-fade .tabset-pills}
 
-Je m'appelle Marius et je fait de l'économie ;)
+## About
 
-# Objectives {.tabset .tabset-fade .tabset-pills}
-
-Contraintes imposées: Une simulation des comportements “réels” des agents, modélisés par des algorithmes simples (PAS D’OPTIMISATION) et en évitant à tout prix des lois globales de marchés. Idéalement, comportements simples et on voit émerger qq chose.
+## Objectives {.tabset .tabset-fade .tabset-pills}
 
 Lorsque je me suis mis à l’économie, j’avais un rêve. Je voulais voir et comprendre un modèle qui partirait des petits comportements des agents et l’utiliserait pour expliquer le comportement d’agrégats apparemment incompréhensibles. Comme tout étudiant en économie j’ai d’abord eu droit à des modèles, comme IS/LM, à la fois très simples, même caricaturaux, mais aussi très puissants pour illustrer des concepts fondamentaux de la macroéconomie. Cependant, ces modèles utilisent des agrégats imprécis et leur pouvoir explicatif est limité à des concepts abstraits – demande et offre totale d’une économie par exemple, ou l’inflation du prix d’un « panier de bien » savamment sélectionné.
 J’attendais donc avec impatience d’aborder enfin les modèles « microfondés ». Je m’imaginais des modèles à l’image de la météo : les interactions entre agents, nos blocs de base, bien connues et comprises ; les données récupérées à l’aide de nombreux capteurs ; finalement, le tout entré dans un supercalculateur, qui simule et recrache les différents scénarios possibles. Avec le temps, et surtout avec une quantité croissante de données et une capacité de calcul grandissante, le modèle deviendrait plus précis, les scénarios envisagés moins nombreux. Tout cela rendu possible par la compréhension fondamentale des micro-interactions, les « microfondations ».
-Les modèles que j’ai découverts étaient très différents. Les fameuses « microfondations » n’étaient qu’une nouvelle version d’une histoire ancienne, une manière pour les économistes de succomber à ce que j’appelle leur « physics envy » – un désir, par ailleurs très compréhensible, de baser leur discipline sur une méthodologie, un type de modélisation et une série d’axiomes sur lesquels tout le monde peut avancer en se comprenant (de préférence avec une dose de mathématiques suffisante pour sauvegarder leur ego devant les physiciens autour de la machine à café). Cela eut des conséquences très positives, permettant aux différentes écoles d’avancer en débattant sur un socle commun, mais figea par nécessité une base encore à mon avis très perfectible (ces fameux modèles microfondés qui ressemblent furieusement à des problèmes de mécanique).
+Les modèles que j’ai découverts étaient très différents. Les fameuses « microfondations » n’étaient qu’une nouvelle version d’une histoire ancienne, une manière pour les économistes de succomber à ce que j’appelle leur « physics envy » – un désir, par ailleurs très compréhensible, de baser leur discipline sur une méthodologie, un type de modélisation et une série d’axiomes sur lesquels tout le monde peut avancer en se comprenant (de préférence avec une dose de mathématiques suffisante pour sauvegarder leur ego devant les physiciens autour de la machine à café). Cela eut des conséquences très positives, permettant aux différentes écoles d’avancer en débattant sur un socle commun, mais figea par nécessité une base encore à mon avis très perfectible (ces fameux modèles microfondés qui ressemblent furieusement à des problèmes de mécanique[a][b]).
 Le modèle que je présente ici est donc une maquette, une proposition pour s’approcher de mon rêve de météo. Il s’agit d’une simulation où le comportement de chaque agent est modélisé par un simple algorithme, pas une optimisation temporelle constante, contrainte ou non par des limites cognitives. L’idée est de s’approcher le plus possible des décisions de la vie de tous les jours, avec une simulation dont le niveau de détail est limité par mes connaissances sur les prises de décisions étudiées ici, la puissance d’un ordinateur portable et, facteur prépondérant, mon imagination. Il s’agit d’une tentative de défrichement, et même si ce modèle s’avère être bancal et peu prédictif, je reste convaincu du potentiel de l’idée sous-jacente.
 Maintenant que l’objectif est établi, il est temps de passer au modèle. Je vais procéder par marchés, qui comprennent chacun tout une facette de comportements de chaque type d’agents. Mais avant tout, il nous faut rencontrer ces agents…
-
-# Analysis {.tabset .tabset-fade .tabset-pills}
-# Description {.tabset .tabset-fade .tabset-pills}
+_
+## Analysis {.tabset .tabset-fade .tabset-pills}
+## Description {.tabset .tabset-fade .tabset-pills}
