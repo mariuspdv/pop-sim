@@ -1,0 +1,18 @@
+{% extends "base.html" %}
+{% block content_title %}{% endblock %}
+{% block content %}
+
+{% if articles %}
+    {% for article in articles_page.object_list %}
+    {% if article.slug == 'home'%}
+        <section id="content" class="body">
+            <h1 class="entry-title">{{ article.title }}</h1>
+            {% import 'translations.html' as translations with context %}
+            {{ translations.translations_for(article) }}
+            {{ article.content }}
+        </section>
+    {% endif %}
+    {% endfor %}
+{% endif%}
+
+{% endblock content %}

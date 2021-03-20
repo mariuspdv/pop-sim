@@ -2,11 +2,11 @@
 # -*- coding: utf-8 -*- #
 
 AUTHOR = 'Marius Poudevigne'
-SITENAME = 'Pop-sim'
+SITENAME = 'POP-SIM'
 SITEURL = ''
-
+OUTPUT_PATH = '../docs/'
 PATH = 'content'
-
+THEME = 'stolenidea'
 TIMEZONE = 'Europe/Paris'
 
 DEFAULT_LANG = 'fr'
@@ -17,6 +17,8 @@ CATEGORY_FEED_ATOM = None
 TRANSLATION_FEED_ATOM = None
 AUTHOR_FEED_ATOM = None
 AUTHOR_FEED_RSS = None
+PAGE_ORDER_BY = 'order'
+DISPLAY_CATEGORIES_ON_MENU = False
 
 # Blogroll
 LINKS = (('Pelican', 'https://getpelican.com/'),
