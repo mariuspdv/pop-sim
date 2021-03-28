@@ -1,15 +1,13 @@
 Lang: fr
 Order: A
-Title: Présentation
+Title: L'approche
 Slug: rationale
 Author: Marius Poudevigne
 Summary: Bienvenue sur POP-SIM
 
 
-# Objectifs
+# Approches économiques classiques
 
-## Approches économiques classiques
-	
 Je suis un étudiant en économie, et ce projet a vu le jour pendant ma première année de Master. En effet, en vrai passionné, j’ai depuis toujours une idée de ce que je voudrais que soit l’économie. J’imaginais un modèle de simulation de tous les comportements pertinents des individus, qui prédirait les changements courts termes à tous les niveaux - agrégats globaux et marchés spécifiques. Ce modèle nous permettrait de baser les débats normatifs sur une base solide, en comparant des résultats de simulations où des facteurs exogènes seraient changés.
 
 Évidemment, après des années d’études du sujet, cet idéal s’est affiné. Une telle simulation est impossible, sauf à implanter des puces dans les cerveaux de toute la population. Les choix individuels sont imprévisibles et souvent irrationnels. A l’inverse, certains des agents les plus informés adaptent leurs comportements aux prévisions du modèle, forçant un changement constant. Pourtant, avec la progression exponentielle de notre puissance de calcul et la multiplication des sources de données, on aurait pu s’attendre à voir des dizaines de chercheurs défricher ce nouveau domaine plein de problèmes frais. N’ayant pas assisté à une ruée vers l’or, j’ai décidé de me poser le défi. Je posterai sur ce site mes premiers éléments de réponse. 
@@ -22,7 +20,7 @@ Ces modèles sont bien sûr très utiles et je ne me permettrais pas une condamn
 
 Bien qu’il soit bon dans une science d’établir un socle qui permette de débattre et d’évaluer la nouvelle recherche sur des facteurs communs, je pense pourtant que la macroéconomie a figé ce socle prématurément. Les interactions de base sont mal comprises, ainsi que leurs liens avec les comportements globaux. Il n’est même pas certain que la forme de modèle mathématique ressemblant fortement à des problèmes de physique du XIXème siècle soit la plus adaptée. Après tout, elle amène ses limites inhérentes, comme la question bien trop proéminente de la solvabilité mathématique (“y a-t-il une solution analytique?” est un refrain bien connu des étudiants). Enfin, on peut questionner la nécessité de la rationalité dans les micro-décisions. Certes, elle permet de créer le lien avec la théorie microéconomique. Mais forcer un modèle déductif plutôt qu’induire les comportements de l’observation semble ne pas cadrer avec la conception standard de l’économie comme science sociale. Tout cela me fait penser qu’une réflexion saine sur des alternatives à ce socle commun, sans remettre en cause ses conclusions, est souhaitable.
 
-##Ma proposition: “Bottom-up simulation"
+# Ma proposition: “Bottom-up simulation"
 
 Dans The Signal and the Noise de Nate Silver, je me souviens avoir été marqué par un passage parlant des modèles météorologiques. Afin d’illustrer les conditions nécessaires à l’amélioration des prédictions avec la quantité de données, il prend ces modèles en exemple. Le point clé est que les règles qui sous-tendent toutes les interactions entre particules, du moins au niveau de précision pertinent, sont bien comprises. Ainsi, le problème de créer un modèle de simulation complet devient un problème de puissance de calcul, de quantité, précision et granularité des données et d’heuristiques. Avec le temps, les progrès dans ces domaines sont reversés dans la précision des modèles météo.
 
@@ -32,7 +30,10 @@ Une réponse m’est venue d’un jeu vidéo. Paradox Interactive est un studio 
 
 C’est sur un forum de ce jeu que l’idée de ce projet m’est venue, en réalisant que des joueurs, dont j’en suis sûr la majorité n’avait pas de diplômes en économie, recréaient des débats économiques du XIXème et XXème siècles sur la “meilleure manière” de développer sa nation. Si un simple jeu, sans aucun input macroéconomique ou lois générales, pouvait faire redécouvrir des théories économiques, que pourrait-on faire avec une simulation plus détaillée du monde moderne?
 
-Je vais donc présenter ici une maquette d’un modèle de simulation dynamique des comportements des agents. L’idée est de défricher le domaine, comprendre quelle base et quels comportements sont essentiels pour observer des phénomènes macroéconomiques intéressants. J’espère pouvoir vous convaincre que, même en utilisant des interactions basiques hyper-simplifiées et schématiques, cette approche et ce niveau d’analyse valent la peine d’être explorés. J’espère aussi pouvoir développer une compréhension de phénomènes macroéconomiques encore obscurs pour moi. Pour cet exercice, les lignes directrices sont :
+Je vais donc présenter ici une maquette d’un modèle de simulation dynamique des comportements des agents. L’idée est de défricher le domaine, comprendre quelle base et quels comportements sont essentiels pour observer des phénomènes macroéconomiques intéressants. J’espère pouvoir vous convaincre que, même en utilisant des interactions basiques hyper-simplifiées et schématiques, cette approche et ce niveau d’analyse valent la peine d’être explorés. J’espère aussi pouvoir développer une compréhension de phénomènes macroéconomiques encore obscurs pour moi. 
+
+Pour cet exercice, les lignes directrices sont :
+
 - s'affranchir de lois générales, par exemple sur les forces du marché pour revenir à une série de « micro-transactions » entre deux agents. Par exemple, ne pas organiser les marchés sous le principe d'une offre-demande globale, ne pas introduire de notions d’équilibre. 
 - compliquer très progressivement. S’arrêter dès que l’économie commence à montrer des cycles, et qu’elle ne diverge pas systématiquement.
 - les agents économiques n’ont qu’une vision très limitée de ce qui les entourent. Ils ont surtout de l’information sur eux-même et celle qu’ils obtiennent en se rendant sur un marché. Ils ne font pas de planification inter-temporelle. Leurs règles d’actions sont simples, et pas le résultat d’une optimisation avancée.
@@ -41,4 +42,11 @@ Je vais donc présenter ici une maquette d’un modèle de simulation dynamique 
 
 L’idée est de s’approcher le plus possible des décisions de la vie de tous les jours, avec une simulation dont le niveau de détail est limité par mes connaissances sur les prises de décisions étudiées ici, la puissance d’un ordinateur portable et, facteur prépondérant, mon imagination. Il s’agit d’une tentative de défrichement, et je reste convaincu du potentiel de l’idée sous-jacente, même si ce modèle reste très rustique.
 
-## Où en suis-je? Quelques résultats
+# Où en suis-je? Quelques résultats
+
+On a atteint l’apparition de cycles (graphes PIB) mais des questions se posent sur la viabilité du modèle à partir d’un certain nombre de simulations.
+
+- Fonctionnement marché du travail (liens croissance salaire et chômage?)
+- Tests sur les marchés des biens (prix et demande? profits et prix?)
+- Lien inflation - production à explorer?
+
