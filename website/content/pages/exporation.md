@@ -1,6 +1,6 @@
 Lang: fr
 Order: D
-Title: Le futur
+Title: Perspectives
 Slug: future
 Author: Marius Poudevigne
 Summary: Voies d'exploration
