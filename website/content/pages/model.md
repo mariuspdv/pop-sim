@@ -1,6 +1,6 @@
 Lang: fr
 Order: B
-Title: Le modèle
+Title: Modèle
 Slug: model
 Author: Marius Poudevigne
 Summary: Description du modèle

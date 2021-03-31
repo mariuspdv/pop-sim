@@ -1,6 +1,6 @@
 Lang: fr
 Order: A
-Title: L'approche
+Title: Approche
 Slug: rationale
 Author: Marius Poudevigne
 Summary: Bienvenue sur POP-SIM
